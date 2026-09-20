@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-const SITE_ORIGIN = 'https://qualitracker.co';
+const SITE_ORIGIN = 'https://qualitracker.com';
 
 /**
  * Per-route <title>, meta description, canonical link, and Open Graph tags

@@ -39,7 +39,7 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build website
         env:
-          BASE_PATH: /qualitrackerwebsite/
+          BASE_PATH: /
         run: pnpm --filter @workspace/qualitracker-website build
       - name: Disable Jekyll processing
         run: touch artifacts/qualitracker-website/dist/public/.nojekyll
