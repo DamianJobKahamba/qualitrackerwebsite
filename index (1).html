@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- No maximum-scale cap — a real Lighthouse run flagged the old
+         maximum-scale=1 for blocking pinch-zoom, a real accessibility need
+         for low-vision users. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QualiTracker — Source-Cited AI Assistant & Digital QMS for Medical Laboratories</title>
+    <meta name="description" content="QualiTracker is the source-cited AI assistant and digital Quality Management System (QMS) built for medical laboratories and health systems in East Africa." />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://qualitracker.co/" />
+    <meta property="og:title" content="QualiTracker — Source-Cited AI Assistant & Digital QMS" />
+    <meta property="og:description" content="QualiTracker is the source-cited AI assistant and digital Quality Management System (QMS) built for medical laboratories and health systems in East Africa." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://qualitracker.co/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="QualiTracker — Source-Cited AI Assistant & Digital QMS" />
+    <meta name="twitter:description" content="QualiTracker is the source-cited AI assistant and digital Quality Management System (QMS) built for medical laboratories and health systems in East Africa." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Site-wide Organization schema — static since it doesn't change per
+         route, unlike the SoftwareApplication/Organization(+founders)
+         schemas that /product, /, and /company inject themselves via
+         useStructuredData. Real facts only: no sameAs (no verified social
+         accounts), no foundingDate (not confirmed). -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Qualitracker Limited",
+        "url": "https://qualitracker.co/",
+        "logo": "https://qualitracker.co/favicon.svg",
+        "description": "Qualitracker Limited is building digital quality infrastructure for laboratories, starting with the everyday reality of running a quality system on paper."
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- A real Lighthouse run against the production build measured this
+         Google Fonts stylesheet as ~800ms render-blocking — true whether
+         it's a CSS @import or a plain <link rel="stylesheet">, since both
+         block first paint until the (cross-origin, third-party) CSS
+         resolves. This is the standard fix: preload it with `as="style"`
+         (fetched early, not render-blocking) then flip it to an active
+         stylesheet once loaded; the <noscript> keeps it working with JS
+         disabled. font-display:swap in the URL still keeps text visible
+         with a fallback font in the meantime either way. -->
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap"
+      onload="this.onload=null;this.rel='stylesheet'"
+    >
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap">
+    </noscript>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
