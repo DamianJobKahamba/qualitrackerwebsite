@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'wouter';
 import { PageShell } from '@/components/site/page-shell';
 import { StatusBadge } from '@/components/site/status-badge';
 import { Button } from '@/components/site/button';
@@ -87,7 +88,7 @@ function IntroductionContent() {
           <strong style={{ color: 'var(--qt-near-black)' }}>The QMS Module</strong> — a versioned document and record repository: SOPs, policies, quality records, and audit logs, kept in one governed, searchable place.
         </li>
         <li className="text-sm leading-6" style={{ color: 'var(--qt-body-grey)' }}>
-          <strong style={{ color: 'var(--qt-near-black)' }}>QualiBOT</strong> — a conversational AI assistant grounded in your lab's own uploaded documents. It answers in plain language, cites its source, and says so plainly when it can't find one — see <a href="/product#ai-rag" style={{ color: 'var(--qt-deep-teal)' }}>how it works</a>.
+          <strong style={{ color: 'var(--qt-near-black)' }}>QualiBOT</strong> — a conversational AI assistant grounded in your lab's own uploaded documents. It answers in plain language, cites its source, and says so plainly when it can't find one — see <Link href="/product#ai-rag" style={{ color: 'var(--qt-deep-teal)' }}>how it works</Link>.
         </li>
       </ul>
       <p className="mt-4 text-sm leading-7" style={{ color: 'var(--qt-body-grey)' }}>

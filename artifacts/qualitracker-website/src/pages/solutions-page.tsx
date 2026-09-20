@@ -1,3 +1,4 @@
+import { Link } from 'wouter';
 import { PageShell } from '@/components/site/page-shell';
 import { SectionHeader } from '@/components/site/section-header';
 import { Button } from '@/components/site/button';
@@ -67,7 +68,7 @@ function SolutionsPage() {
           <SectionHeader eyebrow="What every segment shares" title="One core system, whatever the setting." />
           <div className="mt-10 grid gap-6 lg:grid-cols-[1fr_1fr]">
             <p className="max-w-[440px] text-sm leading-6" style={{ color: 'var(--qt-body-grey)' }}>
-              The segment pages above are about positioning, not a different product — every laboratory type runs on the same QMS Module and QualiBOT stack described on <a href="/product" style={{ color: 'var(--qt-deep-teal)' }}>the product page</a>. What changes by segment is which standards and workflows matter most, not the underlying system.
+              The segment pages above are about positioning, not a different product — every laboratory type runs on the same QMS Module and QualiBOT stack described on <Link href="/product" style={{ color: 'var(--qt-deep-teal)' }}>the product page</Link>. What changes by segment is which standards and workflows matter most, not the underlying system.
             </p>
             <TechnicalRecordBlock
               eyebrow="SYSTEM / ALL SEGMENTS"
