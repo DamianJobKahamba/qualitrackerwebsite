@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://qualitracker.co/sitemap.xml
+Sitemap: https://qualitracker.com/sitemap.xml
