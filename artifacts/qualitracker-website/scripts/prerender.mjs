@@ -56,7 +56,16 @@ async function main() {
   const basePath = process.env.BASE_PATH || '/';
   const normalizedBasePath = `/${basePath.replace(/^\/+|\/+$/g, '')}`.replace(/^\/$/, '');
 
-  const browser = await puppeteer.launch({ headless: true });
+  // GitHub-hosted Ubuntu runners disable the user-namespace sandbox that
+  // Chromium otherwise expects. The runner is already an isolated,
+  // short-lived VM, so disable Chromium's sandbox only in CI; local builds
+  // keep the normal browser sandbox enabled.
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: process.env.CI === 'true'
+      ? ['--no-sandbox', '--disable-setuid-sandbox']
+      : [],
+  });
   try {
     const page = await browser.newPage();
     for (const route of ROUTES) {
