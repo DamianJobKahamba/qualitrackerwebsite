@@ -37,6 +37,8 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Install Chrome for prerendering
+        run: pnpm --filter @workspace/qualitracker-website exec puppeteer browsers install chrome
       - name: Build website
         env:
           BASE_PATH: /
