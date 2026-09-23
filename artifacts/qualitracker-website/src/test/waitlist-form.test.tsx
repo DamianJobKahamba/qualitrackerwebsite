@@ -14,9 +14,10 @@ async function fillRequiredFields() {
   await user.type(screen.getByLabelText(/full name/i), 'Dr. Test');
   await user.type(screen.getByLabelText(/work email/i), 'test@example.org');
   await user.type(screen.getByLabelText(/laboratory \/ organization/i), 'Test Lab');
-  await user.selectOptions(screen.getByLabelText(/organization type/i), 'Medical laboratory');
-  await user.selectOptions(screen.getByLabelText(/^country$/i), 'Kenya');
-  await user.selectOptions(screen.getByLabelText(/your role/i), 'Lab director');
+  await user.type(screen.getByLabelText(/organization type/i), 'Medical laboratory');
+  await user.type(screen.getByLabelText(/^country$/i), 'Kenya');
+  await user.type(screen.getByLabelText(/your role/i), 'Lab director');
+  await user.type(screen.getByLabelText(/expectations for the product/i), 'A simpler way to manage laboratory quality processes.');
   return user;
 }
 

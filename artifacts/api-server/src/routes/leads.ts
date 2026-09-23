@@ -8,6 +8,7 @@ import { db, leadsTable } from "@workspace/db";
 // See openapi.yaml for why the component is named differently.
 import { CreateLeadBody, CreateLeadResponse } from "@workspace/api-zod";
 import { getNewsletterProvider } from "../lib/newsletter-provider";
+import { sendWaitlistNotification } from "../lib/waitlist-notification";
 import { logger } from "../lib/logger";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -87,6 +88,8 @@ router.post("/leads", async (req, res) => {
       institution: input.institution,
       role: input.role,
       country: input.country,
+      organizationType: input.organizationType,
+      message: input.message,
       kind: input.kind,
       source: input.source,
       landingPage: input.landingPage,
@@ -99,7 +102,7 @@ router.post("/leads", async (req, res) => {
       consent: input.consent,
       consentTimestamp: input.consent ? new Date() : null,
     })
-    .returning({ id: leadsTable.id });
+    .returning({ id: leadsTable.id, createdAt: leadsTable.createdAt });
 
   if (input.kind === "newsletter") {
     try {
@@ -111,6 +114,22 @@ router.post("/leads", async (req, res) => {
       // The lead is already safely stored — a provider hiccup should
       // never turn into a lost lead. Log and move on.
       logger.error({ err, email: normalizedEmail }, "Newsletter provider subscribe failed");
+    }
+  }
+
+  if (input.kind === "waitlist") {
+    try {
+      const result = await sendWaitlistNotification({
+        ...input,
+        email: normalizedEmail,
+        id: created.id,
+        createdAt: created.createdAt,
+      });
+      if (result === "not_configured") {
+        logger.warn({ leadId: created.id }, "Waitlist stored; email not configured. Set RESEND_API_KEY, EMAIL_FROM, and WAITLIST_NOTIFICATION_EMAIL.");
+      }
+    } catch {
+      logger.error({ leadId: created.id }, "Waitlist stored; email notification failed. Check the email provider and configuration.");
     }
   }
 

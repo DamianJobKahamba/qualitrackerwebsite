@@ -23,6 +23,40 @@ export interface SubmitLeadInput {
 export const HONEYPOT_FIELD_NAME = 'website';
 
 export async function submitLead(input: SubmitLeadInput): Promise<void> {
+  if (input.kind === 'waitlist') {
+    // EmailJS public identifiers are intended for browser use.
+    // Recipient and CC addresses are fixed in the EmailJS template.
+    if (input.website?.trim()) return;
+    const required = [input.firstName, input.email, input.institution,
+      input.organizationType, input.country, input.role, input.message];
+    if (required.some((value) => !value?.trim()) ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email.trim())) {
+      throw new Error('INVALID_WAITLIST');
+    }
+    const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        service_id: 'service_h8tr7y8',
+        template_id: 'template_v13pvti',
+        user_id: '0Iofba0xfrTcxdb3_',
+        template_params: {
+          full_name: [input.firstName, input.lastName].filter(Boolean).join(' ').trim(),
+          work_email: input.email.trim(),
+          organization: input.institution?.trim(),
+          organization_type: input.organizationType?.trim(),
+          country: input.country?.trim(),
+          role: input.role?.trim(),
+          expectations: input.message?.trim(),
+          submitted_at: new Date().toISOString(),
+        },
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!response.ok) throw new Error('SUBMIT_FAILED');
+    return;
+  }
+
   const params = new URLSearchParams(window.location.search);
 
   const res = await fetch('/api/leads', {
