@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Check } from 'lucide-react';
 import { PageShell } from '@/components/site/page-shell';
-import { TextField, SelectField, TextareaField } from '@/components/site/form-field';
+import { TextField, TextareaField } from '@/components/site/form-field';
 import { HONEYPOT_FIELD_NAME, submitLead } from '@/lib/leads';
 import { useDocumentMeta } from '@/lib/use-document-meta';
 
@@ -26,7 +26,7 @@ function WaitlistPage() {
     const role = String(data.get('role') ?? '').trim();
     const message = String(data.get('message') ?? '').trim();
 
-    if (!name || !email || !institution || !country || !organizationType || !role) {
+    if (!name || !email || !institution || !country || !organizationType || !role || !message) {
       setError('Please fill in every required field.');
       return;
     }
@@ -41,7 +41,7 @@ function WaitlistPage() {
         country,
         organizationType,
         role,
-        message: message || undefined,
+        message,
         source: 'waitlist-page',
         consent: true,
         website: honeypot ? String(honeypot) : undefined,
@@ -86,33 +86,11 @@ function WaitlistPage() {
               <TextField label="Work email" name="email" type="email" required placeholder="you@yourlab.org" data-testid="input-waitlist-email" />
               <TextField label="Laboratory / organization" name="institution" required placeholder="Regional medical laboratory" data-testid="input-waitlist-institution" />
               <div className="grid gap-4 sm:grid-cols-2">
-                <SelectField label="Organization type" name="organizationType" required defaultValue="" data-testid="select-waitlist-org-type">
-                  <option value="" disabled>Select type</option>
-                  <option>Medical laboratory</option>
-                  <option>Testing laboratory</option>
-                  <option>Research laboratory</option>
-                  <option>Multi-site network</option>
-                  <option>Other</option>
-                </SelectField>
-                <SelectField label="Country" name="country" required defaultValue="" data-testid="select-waitlist-country">
-                  <option value="" disabled>Select country</option>
-                  <option>Tanzania</option>
-                  <option>Kenya</option>
-                  <option>Uganda</option>
-                  <option>Rwanda</option>
-                  <option>Ethiopia</option>
-                  <option>Other</option>
-                </SelectField>
+                <TextField label="Organization type" name="organizationType" required placeholder="e.g. Medical laboratory" data-testid="input-waitlist-org-type" />
+                <TextField label="Country" name="country" required placeholder="e.g. Tanzania" data-testid="input-waitlist-country" />
               </div>
-              <SelectField label="Your role" name="role" required defaultValue="" data-testid="select-waitlist-role">
-                <option value="" disabled>Select role</option>
-                <option>Lab director</option>
-                <option>Quality manager / QMS officer</option>
-                <option>Bench technologist</option>
-                <option>Accreditor</option>
-                <option>Other</option>
-              </SelectField>
-              <TextareaField label="Anything about your current setup or challenge? (optional)" name="message" placeholder="e.g. still on paper for temperature logs, prepping for an ISO 15189 assessment…" data-testid="textarea-waitlist-message" />
+              <TextField label="Your role" name="role" required placeholder="e.g. Laboratory manager" data-testid="input-waitlist-role" />
+              <TextareaField label="What are your expectations for the product?" name="message" required placeholder="Tell us what you would like QualiTracker to help you achieve." data-testid="textarea-waitlist-message" />
               <label className="absolute -left-[9999px] h-0 w-0 overflow-hidden" aria-hidden="true">
                 Leave this field empty
                 <input tabIndex={-1} autoComplete="off" name={HONEYPOT_FIELD_NAME} />
