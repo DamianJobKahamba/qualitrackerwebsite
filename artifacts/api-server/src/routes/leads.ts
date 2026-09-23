@@ -87,6 +87,8 @@ router.post("/leads", async (req, res) => {
       institution: input.institution,
       role: input.role,
       country: input.country,
+      organizationType: input.organizationType,
+      message: input.message,
       kind: input.kind,
       source: input.source,
       landingPage: input.landingPage,
