@@ -1,46 +1,47 @@
-# Waitlist email notifications
+# Frontend waitlist email setup
 
-New waitlist leads are saved in PostgreSQL first, then an internal email is attempted through Resend. Other lead kinds and duplicate submissions do not trigger this notification. The visitor receives success after a saved submission even when the email is unconfigured, rejected, or times out (5 seconds). Failures are logged by lead ID. This is best-effort notification: there is no automatic retry queue or backfill; PostgreSQL remains the record of submissions.
+The waitlist now posts directly to EmailJS from the browser. No API server or PostgreSQL is used for waitlist submissions. Other form kinds retain their existing API behavior. Success means EmailJS accepted the request, not a database insert or guaranteed inbox delivery. Duplicate detection is not provided.
 
-## Backend settings
+Service: service_h8tr7y8
+Template: template_v13pvti
+Public key is in src/lib/leads.ts and was transcribed from the supplied screenshot.
 
-- WAITLIST_NOTIFICATION_EMAIL=info@qualitracker.com (comma-separated internal addresses supported)
-- EMAIL_FROM=QualiTracker Website <website@qualitracker.com>
-- RESEND_API_KEY: a sending API key, stored only in backend secrets.
-- DATABASE_URL: the existing PostgreSQL connection.
-- PORT: backend listening port.
+## Required EmailJS template settings
 
-Verify the sender domain in Resend before using website@qualitracker.com. Set these variables through the backend host or process manager; .env.example is documentation and is not automatically loaded. Never place the API key or database URL in VITE_ variables, frontend code, or Git. API reference: https://resend.com/docs/api-reference/emails/send-email
+The template is currently named Auto-Reply in the screenshot; its name can be changed to QualiTracker Waitlist Notification. Ensure it is configured as an internal notification:
+- To Email: info@qualitracker.com (fixed)
+- From Name: QualiTracker Website
+- From Email: use the connected service's default email
+- Reply-To: {{work_email}}
+- Subject: New QualiTracker Waitlist Submission — {{full_name}}
+- CC: paste the user-provided recipient list directly into the EmailJS dashboard. Keep personal recipient addresses out of this repository.
 
-## Message
+These dashboard settings cannot be changed merely by committing GitHub code. They must be saved in EmailJS. Do not use visitor-controlled recipient variables.
 
-Subject: New QualiTracker Waitlist Submission — Jane Doe
+## HTML body
 
-Full name: Jane Doe
-Work email: jane@lab.org
-Laboratory / organization: Regional Medical Laboratory
-Organization type: Public medical laboratory
-Country: Tanzania
-Role: Quality Manager
-Expectations for the product: Better document control and accreditation preparation.
+```html
+<div style="font-family:Arial,sans-serif;color:#1A3A4A;max-width:640px">
+<h2 style="color:#025561">New QualiTracker Waitlist Submission</h2>
+<p><strong>Full name:</strong><br>{{full_name}}</p>
+<p><strong>Work email:</strong><br><a href="mailto:{{work_email}}">{{work_email}}</a></p>
+<p><strong>Laboratory / organization:</strong><br>{{organization}}</p>
+<p><strong>Organization type:</strong><br>{{organization_type}}</p>
+<p><strong>Country:</strong><br>{{country}}</p>
+<p><strong>Your role:</strong><br>{{role}}</p>
+<p><strong>What are your expectations for the product?</strong></p>
+<div style="white-space:pre-wrap">{{expectations}}</div>
+<hr><h3>Submission Details</h3>
+<p><strong>Submitted (UTC):</strong> {{submitted_at}}</p>
+<p><strong>Source:</strong> QualiTracker Waitlist Page</p>
+</div>
+```
 
-Submission Details
-Date (UTC): actual database creation timestamp
-Source: QualiTracker Waitlist Page
-Status: New
-Submission ID: database lead ID
+The API fields match https://www.emailjs.com/docs/rest-api/send/.
+No private key or Gmail password belongs in frontend code.
 
-Both HTML and plain text are sent. The HTML work email is clickable; Reply-To is the submitter's email, so Reply addresses that person. Submitted text is HTML-escaped.
+## Verification
 
-## Deployment requirement
+Run node --test artifacts/qualitracker-website/tests/waitlist-email.test.mjs on Node 22.18+ or 24. Tests mock the service and do not send mail.
 
-The current .github/workflows/static.yml deploys only the frontend to GitHub Pages. It does not start artifacts/api-server or PostgreSQL. The frontend currently posts to the same-origin /api/leads. A backend must run and that path must route to it, for example through a reverse proxy on the website host. GitHub Pages deployment by itself does not establish this route. If retaining Pages with a separately hosted API, configure an explicit frontend API URL and appropriate backend CORS as a follow-up once the backend location is known.
-
-Do not assume live submissions are stored based solely on this source code. After deployment, submit a unique test entry, confirm its PostgreSQL record, then confirm email delivery, all seven fields, and Reply-To.
-
-## Local verification
-
-On Node 22.18+ or Node 24:
-node --test artifacts/api-server/tests/waitlist-notification.test.mjs
-
-Tests mock delivery; no email is sent.
+After merging/deploying and saving the template settings, submit a test from the actual website and check the recipient inboxes and Reply-To. Live delivery and dashboard configuration have not been verified.
