@@ -18,6 +18,7 @@ async function fillRequiredFields() {
   await user.type(screen.getByLabelText(/^country$/i), 'Kenya');
   await user.type(screen.getByLabelText(/your role/i), 'Lab director');
   await user.type(screen.getByLabelText(/expectations for the product/i), 'A simpler way to manage laboratory quality processes.');
+  await user.click(screen.getByRole('checkbox', { name: /privacy notice/i }));
   return user;
 }
 

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Check } from 'lucide-react';
+import { Link } from 'wouter';
 import { PageShell } from '@/components/site/page-shell';
 import { TextField, TextareaField } from '@/components/site/form-field';
 import { HONEYPOT_FIELD_NAME, submitLead } from '@/lib/leads';
@@ -25,9 +26,14 @@ function WaitlistPage() {
     const organizationType = String(data.get('organizationType') ?? '').trim();
     const role = String(data.get('role') ?? '').trim();
     const message = String(data.get('message') ?? '').trim();
+    const consent = data.get('consent') === 'on';
 
     if (!name || !email || !institution || !country || !organizationType || !role || !message) {
       setError('Please fill in every required field.');
+      return;
+    }
+    if (!consent) {
+      setError('Please confirm you have read the Privacy Notice.');
       return;
     }
 
@@ -43,7 +49,7 @@ function WaitlistPage() {
         role,
         message,
         source: 'waitlist-page',
-        consent: true,
+        consent,
         website: honeypot ? String(honeypot) : undefined,
       });
       setSubmitted(true);
@@ -91,6 +97,12 @@ function WaitlistPage() {
               </div>
               <TextField label="Your role" name="role" required placeholder="e.g. Laboratory manager" data-testid="input-waitlist-role" />
               <TextareaField label="What are your expectations for the product?" name="message" required placeholder="Tell us what you would like QualiTracker to help you achieve." data-testid="textarea-waitlist-message" />
+              <label className="flex items-start gap-3 text-xs leading-5" style={{ color: 'var(--qt-body-grey)' }}>
+                <input type="checkbox" name="consent" required className="mt-0.5 h-4 w-4 shrink-0" style={{ accentColor: 'var(--qt-deep-teal)' }} data-testid="checkbox-waitlist-consent" />
+                <span>
+                  I have read the <Link href="/privacy" className="underline" style={{ color: 'var(--qt-deep-teal)' }}>Privacy Notice</Link> and agree that QualiTracker may use these details to contact me about early access.
+                </span>
+              </label>
               <label className="absolute -left-[9999px] h-0 w-0 overflow-hidden" aria-hidden="true">
                 Leave this field empty
                 <input tabIndex={-1} autoComplete="off" name={HONEYPOT_FIELD_NAME} />

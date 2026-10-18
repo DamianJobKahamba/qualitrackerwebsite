@@ -45,3 +45,14 @@ No private key or Gmail password belongs in frontend code.
 Run node --test artifacts/qualitracker-website/tests/waitlist-email.test.mjs on Node 22.18+ or 24. Tests mock the service and do not send mail.
 
 After merging/deploying and saving the template settings, submit a test from the actual website and check the recipient inboxes and Reply-To. Live delivery and dashboard configuration have not been verified.
+
+## Talk to the team (interim setup)
+
+The Talk to the team form used to POST to `/api/leads`, which does not exist on the static host (HTTP 405), so every submission failed. It now sends through the **same EmailJS service and template as the waitlist** (see `EMAILJS.templates` in `src/lib/leads.ts`). Consequences until a dedicated template exists:
+
+- The email subject reads "New QualiTracker Waitlist Submission — {name}" and the footer says "Source: QualiTracker Waitlist Page".
+- To tell them apart, an inquiry's **Organization type** reads "Talk to the team inquiry", and **expectations** starts with `Inquiry: <category>`.
+
+To fix properly: create a second EmailJS template ("QualiTracker Inquiry Notification", To: info@qualitracker.com, Reply-To `{{work_email}}`, subject "New QualiTracker inquiry — {{full_name}}"), then change `EMAILJS.templates.talk_to_team` to its ID. No other code changes are needed.
+
+Both forms now require the visitor to tick a Privacy Notice confirmation (`/privacy`, draft pending legal review) before anything is sent.

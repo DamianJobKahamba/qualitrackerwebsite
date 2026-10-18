@@ -33,3 +33,27 @@ test('honeypot and invalid inputs do not send email', async () => {
  await assert.rejects(submitLead({...lead,message:' '}),/INVALID_WAITLIST/);
  } finally {globalThis.fetch=original;}
 });
+
+test('talk_to_team goes through EmailJS (never /api/leads) with the inquiry in expectations', async () => {
+  const original = globalThis.fetch;
+  try {
+    const calls = [];
+    globalThis.fetch = async (url, options) => { calls.push({ url, body: JSON.parse(options.body) }); return new Response('OK'); };
+    await submitLead({ kind: 'talk_to_team', firstName: 'Jane', email: 'jane@example.org', message: 'Inquiry: General inquiry\n\nHello', source: 'talk-to-team-page', consent: true });
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, 'https://api.emailjs.com/api/v1.0/email/send');
+    assert.match(calls[0].body.template_params.expectations, /Hello/);
+    assert.equal(calls[0].body.template_params.organization, 'Not provided');
+  } finally { globalThis.fetch = original; }
+});
+
+test('submissions without consent are rejected before any request', async () => {
+  const original = globalThis.fetch;
+  try {
+    let called = false;
+    globalThis.fetch = async () => { called = true; return new Response('OK'); };
+    await assert.rejects(submitLead({ ...lead, consent: false }), /CONSENT_REQUIRED/);
+    await assert.rejects(submitLead({ kind: 'talk_to_team', firstName: 'J', email: 'j@example.org', message: 'hi', source: 'x', consent: false }), /CONSENT_REQUIRED/);
+    assert.equal(called, false);
+  } finally { globalThis.fetch = original; }
+});

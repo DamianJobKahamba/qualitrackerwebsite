@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Check } from 'lucide-react';
+import { Link } from 'wouter';
 import { PageShell } from '@/components/site/page-shell';
 import { TextField, SelectField, TextareaField } from '@/components/site/form-field';
 import { HONEYPOT_FIELD_NAME, submitLead } from '@/lib/leads';
@@ -33,9 +34,14 @@ function TalkToTeamPage() {
     const country = String(data.get('country') ?? '').trim();
     const category = String(data.get('category') ?? '').trim();
     const note = String(data.get('message') ?? '').trim();
+    const consent = data.get('consent') === 'on';
 
     if (!name || !email || !category) {
       setError('Please fill in your name, email, and inquiry type.');
+      return;
+    }
+    if (!consent) {
+      setError('Please confirm you have read the Privacy Notice.');
       return;
     }
 
@@ -49,7 +55,7 @@ function TalkToTeamPage() {
         country: country || undefined,
         message: `Inquiry: ${category}${note ? `\n\n${note}` : ''}`,
         source: 'talk-to-team-page',
-        consent: true,
+        consent,
         website: honeypot ? String(honeypot) : undefined,
       });
       setSubmitted(true);
@@ -99,6 +105,12 @@ function TalkToTeamPage() {
                 {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
               </SelectField>
               <TextareaField label="Message (optional)" name="message" placeholder="Tell us a bit more…" data-testid="textarea-talk-message" />
+              <label className="flex items-start gap-3 text-xs leading-5" style={{ color: 'var(--qt-body-grey)' }}>
+                <input type="checkbox" name="consent" required className="mt-0.5 h-4 w-4 shrink-0" style={{ accentColor: 'var(--qt-deep-teal)' }} data-testid="checkbox-talk-consent" />
+                <span>
+                  I have read the <Link href="/privacy" className="underline" style={{ color: 'var(--qt-deep-teal)' }}>Privacy Notice</Link> and agree that QualiTracker may use these details to reply to my message.
+                </span>
+              </label>
               <label className="absolute -left-[9999px] h-0 w-0 overflow-hidden" aria-hidden="true">
                 Leave this field empty
                 <input tabIndex={-1} autoComplete="off" name={HONEYPOT_FIELD_NAME} />
