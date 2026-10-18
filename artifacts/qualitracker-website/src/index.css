@@ -165,7 +165,7 @@
 
 @layer base {
   * { @apply border-border; }
-  html { scroll-behavior: smooth; }
+  html { scroll-behavior: smooth; scroll-padding-top: 5rem; } /* clear the sticky header for anchors/focus */
   body { @apply font-sans antialiased bg-background text-foreground; margin: 0; }
   ::selection { background: hsl(var(--accent) / .35); color: var(--qt-near-black); }
 }
@@ -346,3 +346,11 @@
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* Skip-navigation link (WCAG 2.4.1): off-screen until keyboard focus. */
+.qt-skip-link {
+  position: absolute; left: .75rem; top: -4rem; z-index: 100;
+  padding: .625rem 1rem; border-radius: 4px;
+  background: var(--qt-deep-teal); color: #fff; font-size: .875rem; font-weight: 600;
+}
+.qt-skip-link:focus { top: .75rem; }

@@ -30,7 +30,7 @@ const ORGANIZATION_SCHEMA = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
   name: 'Qualitracker Limited',
-  url: 'https://qualitracker.com/company',
+  url: 'https://qualitracker.com/company/',
   founder: TEAM.map((person) => ({ '@type': 'Person', name: person.name, jobTitle: person.role })),
 };
 
