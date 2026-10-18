@@ -9,7 +9,8 @@
     "build:no-prerender": "vite build --config vite.config.ts",
     "serve": "VITE_STATIC_PREVIEW=true vite preview --config vite.config.ts --host 0.0.0.0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:node": "node --test \"tests/**/*.test.mjs\""
   },
   "devDependencies": {
     "@hookform/resolvers": "^3.10.0",
