@@ -14,6 +14,7 @@ const COLUMNS: Array<[string, Array<{ label: string; href: string }>]> = [
   ]],
   ['Get started', [
     { label: 'Join the waitlist', href: '/waitlist' },
+    { label: 'Book a demo', href: '/book-demo' },
     { label: 'Talk to the team', href: '/talk-to-team' },
     { label: 'Security', href: '/security' },
   ]],

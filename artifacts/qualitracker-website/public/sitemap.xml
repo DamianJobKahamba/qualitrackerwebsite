@@ -49,6 +49,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://qualitracker.com/book-demo/</loc>
+    <lastmod>2026-09-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://qualitracker.com/privacy/</loc>
     <lastmod>2026-09-04</lastmod>
     <changefreq>monthly</changefreq>

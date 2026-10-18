@@ -267,7 +267,7 @@ Core Web Vitals thresholds (LCP ≤2.5s / INP ≤200ms / CLS ≤0.1; web.dev) an
 
 ## Remediation status (added same day, on `dev`)
 
-Fixed on the `dev` branch and verified locally (typecheck, lint, 15 vitest + 5 node:test, full build with prerender, and inspection of the built HTML). **None of this is verified in production until `dev` is merged and deployed**, so re-run the live checks in this report after the merge.
+Fixed on the `dev` branch and verified locally (typecheck, lint, 20 vitest + 7 node:test, full build with prerender, and inspection of the built HTML). **None of this is verified in production until `dev` is merged and deployed**, so re-run the live checks in this report after the merge.
 
 | Finding | Status | What changed |
 |---|---|---|
@@ -282,4 +282,6 @@ Fixed on the `dev` branch and verified locally (typecheck, lint, 15 vitest + 5 n
 | H1 Analytics | **Open** | Needs a vendor + consent decision. |
 | H4 Waitlist abuse | **Open** | EmailJS dashboard (domain allowlist, rate limit) + CAPTCHA; not a code-only change. |
 | M3 Security headers | **Open** | Needs a CDN/proxy in front of Pages. |
-| M5, M7, L1, L2 | **Open** | Manual a11y pass; branch protection (repo admin); remove dead api-server; trim JS chunk. |
+| L1 api-server | **Fixed on dev** | `artifacts/api-server` deleted, lockfile refreshed; `pnpm audit --prod` is clean. The dead `/api/leads` code path in `leads.ts` is gone too. Orphaned libs (`lib/db`, `lib/api-spec`, `lib/api-zod`, `lib/api-client-react`) and `.replit` remain; remove separately. |
+| Book a demo (new) | **Added on dev** | `/book-demo` request form (date, backup date, time window, time zone) emails info@qualitracker.com via EmailJS; team confirms by replying. Not a live-availability booking. Shares the waitlist template until a dedicated one is created (see `docs/WAITLIST_EMAIL_SETUP.md`). Privacy notice updated. |
+| M5, M7, L2 | **Open** | Manual a11y pass; branch protection (repo admin); trim JS chunk. |

@@ -14,12 +14,12 @@ const SECTIONS: Array<{ heading: string; body: string[] }> = [
   {
     heading: 'What we collect',
     body: [
-      'Only what you type into the two forms on this site. Join the waitlist: your name, work email, organization, organization type, country, role, and what you expect from the product. Talk to the team: your name, work email, the type of inquiry, your message, and optionally your organization and country.',
+      'Only what you type into the three forms on this site. Join the waitlist: your name, work email, organization, organization type, country, role, and what you expect from the product. Talk to the team: your name, work email, the type of inquiry, your message, and optionally your organization and country. Book a demo: your name, work email, organization, the date(s) and time window you prefer, your time zone as reported by your browser, and optionally your role, country and notes.',
     ],
   },
   {
     heading: 'Why we collect it',
-    body: ['To reply to you — about early access to QualiTracker, or about the inquiry you sent. We don\'t use these details for anything else.'],
+    body: ['To reply to you — about early access to QualiTracker, the inquiry you sent, or the demo you asked for. We don\'t use these details for anything else.'],
   },
   {
     heading: 'Where it goes',

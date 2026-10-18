@@ -42,7 +42,7 @@ const ROOT = join(__dirname, '..');
 // to know about a script tag that arrived via the static HTML rather than
 // its own effect. Processing "/" last means every other route still sees
 // the pristine, build-fresh index.html as its fallback shell.
-const ROUTES = ['/product', '/solutions', '/docs', '/company', '/security', '/waitlist', '/talk-to-team', '/privacy', '/'];
+const ROUTES = ['/product', '/solutions', '/docs', '/company', '/security', '/waitlist', '/talk-to-team', '/book-demo', '/privacy', '/'];
 
 const DEFAULT_TITLE = 'QualiTracker — Source-Cited AI Assistant & Digital QMS for Medical Laboratories';
 
