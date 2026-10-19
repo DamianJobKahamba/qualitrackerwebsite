@@ -59,12 +59,13 @@ GitHub > Actions > "Firebase Hosting preview" > Run workflow (branch `dev`, chan
 
 ## 4. Custom-domain cutover (live site) — only after step 3 is happy
 
-Findings on `qualitracker.com` today (public DNS lookup, 2026-10-19):
-- **Nameservers are `*.dns-parking.com`, which appears to be Hostinger, not Google.** Confirm where the domain is registered and where its DNS is edited before planning the cutover.
-- `A` records point at GitHub Pages (`185.199.108-111.153`); `www` is a CNAME to `damianjobkahamba.github.io`.
-- **Email is live and must not break:** `MX` -> Google (`SMTP.GOOGLE.com`); SPF `TXT` includes both `_spf.mail.hostinger.com` and `_spf.google.com`; a Google site-verification `TXT` exists.
+Findings on `qualitracker.com` (public DNS lookups, 2026-10-19), corrected after the team confirmed the website itself was moved off Hostinger to GitHub Pages:
+- **The website is served from GitHub Pages** (`A` records `185.199.108-111.153`; `www` is a CNAME to `damianjobkahamba.github.io`). Hosting is no longer at Hostinger.
+- **The DNS zone is still at Hostinger.** The nameservers are `orbit`/`horizon.dns-parking.com` and the zone's SOA names `dns.hostinger.com` (last changed 2026-10-15). Hosting and DNS are separate: the records are still edited in Hostinger's DNS panel until the nameservers are changed at the registrar. Who the registrar is could not be determined (whois returned nothing); check where the domain is registered/renewed.
+- **Do not cancel or let lapse the Hostinger account until the DNS has been moved (or confirmed to survive).** If the DNS zone disappears with it, the website and email stop working. Either keep the zone there, or move the nameservers (e.g. to Cloud DNS in this project) first and copy every record across.
+- **Email is live and must not break:** `MX` -> Google (`SMTP.GOOGLE.com`); SPF `TXT` includes both `_spf.mail.hostinger.com` and `_spf.google.com`; a Google site-verification `TXT` exists. If no mail is sent through Hostinger any more, the Hostinger SPF include can be removed later; confirm first.
 
-Steps: Firebase Console > Hosting > Add custom domain (`qualitracker.com` and `www`). Firebase shows the exact records. Then, in the DNS editor: lower the TTL on the `A`/`CNAME` records a day ahead; replace **only** the `A` (and `www` `CNAME`) records with Firebase's values; add Firebase's verification `TXT` alongside what exists; **do not edit `MX` or the existing `TXT` records.** TLS certificates are issued automatically (can take minutes to hours). Rollback = restore the old GitHub `A` records. After it is stable, disable `static.yml` (or leave it, it only serves the old `github.io` address).
+Steps: Firebase Console > Hosting > Add custom domain (`qualitracker.com` and `www`). Firebase shows the exact records. Then, in the DNS editor (Hostinger's DNS panel, unless the nameservers have been moved): lower the TTL on the `A`/`CNAME` records a day ahead; replace **only** the `A` (and `www` `CNAME`) records with Firebase's values; add Firebase's verification `TXT` alongside what exists; **do not edit `MX` or the existing `TXT` records.** TLS certificates are issued automatically (can take minutes to hours). Rollback = restore the old GitHub `A` records. After it is stable, disable `static.yml` (or leave it, it only serves the old `github.io` address).
 
 ## 5. Enforce security headers
 

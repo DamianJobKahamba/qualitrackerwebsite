@@ -8,7 +8,7 @@ Status: **decisions made, config prepared, nothing deployed.** See `23_GCP_SETUP
 |---|---|
 | GCP project | `peppy-house-510317-n5` (billing contact given as `info@qualitrqacker.com` — looks like a typo, to confirm) |
 | Google Workspace | **Yes** (public DNS also shows Google `MX`) -> Gmail API / Calendar options open |
-| Who controls DNS | Team believes Google; **public lookup shows `dns-parking.com` nameservers (appears to be Hostinger).** To confirm before cutover |
+| Who controls DNS | Team said the site moved off Hostinger to GitHub Pages (confirmed: `A` records point to GitHub). **The DNS zone itself is still at Hostinger** (SOA `dns.hostinger.com`); registrar unknown. Do not cancel Hostinger before DNS is moved |
 | Move to Firebase Hosting | **Yes** |
 | Data region | **`africa-south1` (Johannesburg)** for stored data; honest limits in the runbook's residency table |
 
