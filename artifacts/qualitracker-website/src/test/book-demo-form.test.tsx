@@ -93,3 +93,34 @@ describe('BookDemoPage', () => {
     expect(screen.queryByText(/request received/i)).not.toBeInTheDocument();
   });
 });
+
+describe('BookDemoPage with our own lead endpoint configured', () => {
+  afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
+  const API = 'https://lead-api-1234.africa-south1.run.app';
+
+  it('posts to the endpoint (not EmailJS) and still tells the visitor it is not booked yet', async () => {
+    vi.stubEnv('VITE_LEAD_API_URL', API);
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ ok: true }) });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage();
+    const user = userEvent.setup();
+    await fill(user);
+    await user.click(screen.getByRole('button', { name: /request this time/i }));
+    expect(await screen.findByText(/isn't booked yet/i)).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe(API);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).preferredTime).toBe('Morning (09:00–12:00)');
+  });
+
+  it('falls back to EmailJS when the endpoint is down, and the visitor still sees success', async () => {
+    vi.stubEnv('VITE_LEAD_API_URL', API);
+    const fetchMock = vi.fn(async (url: string) => (url === API ? { ok: false, status: 503 } : { ok: true, status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    renderPage();
+    const user = userEvent.setup();
+    await fill(user);
+    await user.click(screen.getByRole('button', { name: /request this time/i }));
+    expect(await screen.findByText(/request received/i)).toBeInTheDocument();
+    expect(fetchMock.mock.calls.map((c) => c[0])).toEqual([API, 'https://api.emailjs.com/api/v1.0/email/send']);
+  });
+});

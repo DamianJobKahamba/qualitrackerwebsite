@@ -75,7 +75,69 @@ export function formatDemoDate(iso: string): string {
   });
 }
 
-export async function submitLead(input: SubmitLeadInput): Promise<void> {
+export interface SubmitLeadOptions {
+  /** Overrides VITE_LEAD_API_URL (used by tests). */
+  apiUrl?: string;
+}
+
+/** Thrown for answers that retrying elsewhere cannot fix (bad input, rate limit). */
+class LeadRejectedError extends Error {}
+
+/**
+ * Sends the lead to our own endpoint (Cloud Run function in Johannesburg: saves to Firestore, emails the
+ * team via Workspace) when VITE_LEAD_API_URL is set at build time. Returns false when the endpoint is
+ * unconfigured or unusable so the caller falls back to EmailJS and the lead is never lost:
+ * network error/timeout, 403 (origin not allowed), 404/405 (no such endpoint, e.g. GitHub Pages), 5xx.
+ * 400 and 429 are real answers (invalid input / rate limited) and are thrown, not retried elsewhere.
+ */
+async function sendViaLeadApi(input: SubmitLeadInput, apiUrl: string | undefined): Promise<boolean> {
+  if (!apiUrl) return false;
+  let response: Response;
+  try {
+    response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        kind: input.kind,
+        email: input.email.trim(),
+        firstName: [input.firstName, input.lastName].filter(Boolean).join(' ').trim(),
+        institution: input.institution,
+        role: input.role,
+        country: input.country,
+        organizationType: input.organizationType,
+        message: input.message,
+        preferredDate: input.preferredDate,
+        backupDate: input.backupDate,
+        preferredTime: input.preferredTime,
+        timezone: input.timezone,
+        source: input.source,
+        consent: input.consent,
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+  } catch {
+    return false;
+  }
+  if (response.ok) return true;
+  if (response.status === 400) {
+    const body = (await response.json().catch(() => ({}))) as { error?: string };
+    throw new LeadRejectedError(body.error === 'CONSENT_REQUIRED' ? 'CONSENT_REQUIRED' : `INVALID_${input.kind.toUpperCase()}`);
+  }
+  if (response.status === 429) throw new LeadRejectedError('RATE_LIMITED');
+  return false;
+}
+
+async function deliver(
+  input: SubmitLeadInput,
+  options: SubmitLeadOptions | undefined,
+  emailJsParams: Record<string, string | undefined>,
+): Promise<void> {
+  const apiUrl = options?.apiUrl ?? (import.meta.env?.VITE_LEAD_API_URL as string | undefined) ?? undefined;
+  if (await sendViaLeadApi(input, apiUrl || undefined)) return;
+  await sendViaEmailJs(input.kind, emailJsParams);
+}
+
+export async function submitLead(input: SubmitLeadInput, options?: SubmitLeadOptions): Promise<void> {
   // Honeypot: silently succeed for bots without sending anything.
   if (input.website?.trim()) return;
 
@@ -87,7 +149,7 @@ export async function submitLead(input: SubmitLeadInput): Promise<void> {
     const required = [input.firstName, input.institution, input.organizationType, input.country, input.role, input.message];
     if (required.some((value) => !value?.trim())) throw new Error('INVALID_WAITLIST');
     if (!input.consent) throw new Error('CONSENT_REQUIRED');
-    await sendViaEmailJs('waitlist', {
+    await deliver(input, options, {
       full_name: [input.firstName, input.lastName].filter(Boolean).join(' ').trim(),
       work_email: input.email.trim(),
       organization: input.institution?.trim(),
@@ -103,7 +165,7 @@ export async function submitLead(input: SubmitLeadInput): Promise<void> {
   if (input.kind === 'talk_to_team') {
     if (!input.firstName?.trim() || !input.message?.trim()) throw new Error('INVALID_TALK_TO_TEAM');
     if (!input.consent) throw new Error('CONSENT_REQUIRED');
-    await sendViaEmailJs('talk_to_team', {
+    await deliver(input, options, {
       full_name: input.firstName.trim(),
       work_email: input.email.trim(),
       organization: input.institution?.trim() || 'Not provided',
@@ -136,7 +198,7 @@ export async function submitLead(input: SubmitLeadInput): Promise<void> {
     `Visitor's time zone: ${input.timezone?.trim() || 'Not provided'}`,
     ...(input.message?.trim() ? ['', `Notes: ${input.message.trim()}`] : []),
   ];
-  await sendViaEmailJs('demo_request', {
+  await deliver(input, options, {
     full_name: input.firstName.trim(),
     work_email: input.email.trim(),
     organization: input.institution.trim(),

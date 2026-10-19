@@ -48,6 +48,8 @@ jobs:
       - name: Build website
         env:
           BASE_PATH: /
+          # Optional repository variable: URL of the lead-api Cloud Run function. Unset = forms use EmailJS only.
+          VITE_LEAD_API_URL: ${{ vars.LEAD_API_URL }}
         run: pnpm --filter @workspace/qualitracker-website build
       - name: Authenticate to Google Cloud (keyless)
         uses: google-github-actions/auth@v2

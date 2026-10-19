@@ -153,3 +153,6 @@ allowBuilds:
   # from Google's own CDN — no arbitrary third-party code execution beyond
   # that. Needed to build-time prerender the website's static routes.
   puppeteer: true
+  # protobufjs's postinstall is an optional version check (pulled in by @google-cloud/firestore);
+  # deliberately not run.
+  protobufjs: false

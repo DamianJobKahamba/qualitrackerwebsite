@@ -13,7 +13,8 @@ gcloud config set project peppy-house-510317-n5
 gcloud services enable firebase.googleapis.com firebasehosting.googleapis.com \
   firestore.googleapis.com cloudfunctions.googleapis.com run.googleapis.com \
   cloudbuild.googleapis.com artifactregistry.googleapis.com secretmanager.googleapis.com \
-  iamcredentials.googleapis.com sts.googleapis.com logging.googleapis.com monitoring.googleapis.com
+  iamcredentials.googleapis.com sts.googleapis.com logging.googleapis.com monitoring.googleapis.com \
+  gmail.googleapis.com
 ```
 
 Confirm billing is attached to the project (Console > Billing). Note: the billing contact was given as `info@qualitrqacker.com` — that looks like a typo of `qualitracker.com`; check it in the console so invoices and alerts do not bounce.
@@ -68,6 +69,75 @@ Steps: Firebase Console > Hosting > Add custom domain (`qualitracker.com` and `w
 ## 5. Enforce security headers
 
 `firebase.json` ships `Content-Security-Policy-Report-Only`. After a few days of real traffic on the preview/live site with no console violations, rename the header key to `Content-Security-Policy`. Add `includeSubDomains`/`preload` to HSTS only once every subdomain of `qualitracker.com` is HTTPS-only (it currently sets `max-age=31536000` only).
+
+## 6. Deploy the lead endpoint (`artifacts/lead-api`)
+
+What it does: the three website forms POST to this Cloud Run function in **Johannesburg**. It checks the browser origin, size and a hidden honeypot field, validates every field again, applies rate limits (5 per IP per hour, 3 per email per day, stored only as salted hashes), **saves the lead to Firestore first**, then emails the team through Gmail as `MAIL_SENDER` with Reply-To set to the visitor. If the email fails the visitor still sees success (the lead is saved) and an `ERROR` log `lead_email_failed` fires; if the save fails they get an error and the website falls back to EmailJS. Code and 28 unit tests: `artifacts/lead-api`.
+
+**Sender decision:** it sends as `info@qualitracker.com` (the one mailbox known to exist) via `MAIL_SENDER`. To use a dedicated address, create that Workspace user, then change the one env var and the delegation `sub` follows automatically.
+
+```bash
+PROJECT=peppy-house-510317-n5
+REGION=africa-south1
+SA_NAME=lead-api
+SA=$SA_NAME@$PROJECT.iam.gserviceaccount.com
+
+# a) runtime identity: may write Firestore, read its one secret, and sign delegation JWTs for itself
+gcloud iam service-accounts create $SA_NAME --display-name="Lead API"
+gcloud projects add-iam-policy-binding $PROJECT --member=serviceAccount:$SA --role=roles/datastore.user
+gcloud iam service-accounts add-iam-policy-binding $SA --member=serviceAccount:$SA \
+  --role=roles/iam.serviceAccountTokenCreator
+
+# b) salt for hashing IPs/emails in the rate-limit store (kept in-region)
+openssl rand -base64 32 | tr -d '\n' | gcloud secrets create lead-hash-salt --data-file=- \
+  --replication-policy=user-managed --locations=$REGION
+gcloud secrets add-iam-policy-binding lead-hash-salt --member=serviceAccount:$SA --role=roles/secretmanager.secretAccessor
+
+# c) Firestore: deny-all rules + automatic deletion (TTL) of expired leads and rate counters
+firebase deploy --only firestore:rules --project $PROJECT
+gcloud firestore fields ttls update expireAt --collection-group=leads --enable-ttl --database='(default)'
+gcloud firestore fields ttls update expireAt --collection-group=rate  --enable-ttl --database='(default)'
+```
+
+**d) Allow the service account to send mail (Workspace super-admin, once).** Get the numeric ID with `gcloud iam service-accounts describe $SA --format='value(uniqueId)'`. Then in admin.google.com: Security > Access and data control > API controls > **Manage Domain-Wide Delegation** > Add new: Client ID = that number; OAuth scope = `https://www.googleapis.com/auth/gmail.send` (only this one). This lets the function send mail as a user on your domain and nothing else; there is no key file to leak. If a send later logs `token exchange failed: HTTP 401`, this step is missing or has the wrong scope.
+
+```bash
+# e) deploy (builds TypeScript in Cloud Build via the package's gcp-build script)
+gcloud functions deploy lead-api --gen2 --region=$REGION --runtime=nodejs22 \
+  --source=artifacts/lead-api --entry-point=submitLead --trigger-http --allow-unauthenticated \
+  --service-account=$SA --memory=256Mi --timeout=30s --max-instances=5 \
+  --set-env-vars=MAIL_TO=info@qualitracker.com,MAIL_SENDER=info@qualitracker.com,RETENTION_DAYS=730 \
+  --set-secrets=HASH_SALT=lead-hash-salt:latest
+gcloud functions describe lead-api --gen2 --region=$REGION --format='value(serviceConfig.uri)'   # the URL
+```
+
+`--allow-unauthenticated` is required because browsers call it directly; if your organisation has a policy blocking public Cloud Run services the deploy will say so and an admin must allow it for this one service. The endpoint is protected by the origin check, validation and rate limits above, not by login.
+
+**Why the browser calls the function's own URL:** Firebase Hosting's Cloud Run rewrites list a fixed set of regions that does not include `africa-south1` ([docs](https://firebase.google.com/docs/hosting/cloud-run)), so `/api/...` on the website cannot be routed there. Routing it through a supported region would send visitors' details through that region first, which defeats the point of choosing Johannesburg.
+
+**Smoke test** (replace `URL`; expects `204`, then `400`, never `200` for the bad one):
+
+```bash
+curl -si -X OPTIONS -H 'Origin: https://qualitracker.com' URL | head -3
+curl -s -X POST -H 'Origin: https://qualitracker.com' -H 'Content-Type: application/json' -d '{"kind":"waitlist","email":"x"}' URL
+```
+Then submit a real test from a preview deploy and check: a document appears in Firestore `leads` with `emailStatus: "sent"`, the email arrives at `info@` with Reply-To = the test address, and a second submission with the same address 4 times in a day gets blocked.
+
+**f) Turn it on for the website.** Add a GitHub repo *variable* `LEAD_API_URL` = the function URL. The preview workflow passes it to the build as `VITE_LEAD_API_URL`; unset means forms keep using EmailJS only. **Do not set it for the live site until this checklist is done:**
+- [ ] `/privacy` rewritten to match reality (leads stored in Firestore in Johannesburg, emailed via Google Workspace, EmailJS only as a fallback) and legally reviewed
+- [ ] retention period decided (`RETENTION_DAYS` is a **placeholder of 730**) and stated on `/privacy`
+- [ ] smoke test above passed on a preview URL
+- [ ] alert created (below)
+
+**g) Alert when a lead email fails or the store breaks:**
+```bash
+gcloud logging metrics create lead_api_errors --project=$PROJECT \
+  --description="lead-api failures: email, store or rate-limit store" \
+  --log-filter='resource.type="cloud_run_revision" AND resource.labels.service_name="lead-api" AND jsonPayload.severity="ERROR"'
+```
+Then Console > Monitoring > Alerting > Create policy on metric `lead_api_errors` (condition: count > 0 over 5 min) with notification channel `info@qualitracker.com`. A lead whose email failed is not lost: it is in Firestore with `emailStatus: "failed"`. There is no automatic resend yet; re-send by hand from Firestore until one is added.
+
+**Spam protection in place vs. not:** honeypot, origin allow-list, size/type limits, strict validation, per-IP and per-email rate limits. **Not in place:** a CAPTCHA / reCAPTCHA Enterprise check. A determined bot using real browsers or rotating IPs can still submit; if spam appears, add reCAPTCHA Enterprise (needs a key created in the console, a script allowed in the CSP, and a privacy-notice update).
 
 ## What stays in Africa and what doesn't
 

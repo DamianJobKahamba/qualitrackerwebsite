@@ -89,3 +89,62 @@ test('demo_request without date/time/consent or with a bad date is rejected befo
     assert.equal(called, false);
   } finally { globalThis.fetch = original; }
 });
+
+// --- Own endpoint (Cloud Run, Johannesburg) with EmailJS fallback -------------------------------
+const API = 'https://lead-api-1234.africa-south1.run.app';
+const talkLead = { kind: 'talk_to_team', firstName: 'Sam', email: 'sam@example.org', message: 'Hello', source: 'talk-to-team-page', consent: true };
+
+async function withFetch(handler, run) {
+  const original = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, options) => { calls.push({ url: String(url), body: JSON.parse(options.body) }); return handler(String(url), calls.length); };
+  try { await run(calls); } finally { globalThis.fetch = original; }
+}
+
+test('with an API URL configured the lead goes to our endpoint only (EmailJS untouched)', async () => {
+  await withFetch(() => Response.json({ ok: true }), async (calls) => {
+    await submitLead({ ...talkLead, lastName: 'Lee' }, { apiUrl: API });
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, API);
+    assert.equal(calls[0].body.kind, 'talk_to_team');
+    assert.equal(calls[0].body.firstName, 'Sam Lee');
+    assert.equal(calls[0].body.consent, true);
+    assert.equal('website' in calls[0].body, false, 'honeypot value is never forwarded');
+  });
+});
+
+for (const status of [403, 404, 405, 500, 503]) {
+  test(`API answering ${status} falls back to EmailJS so the lead is not lost`, async () => {
+    await withFetch((url) => (url === API ? new Response('x', { status }) : new Response('OK')), async (calls) => {
+      await submitLead(talkLead, { apiUrl: API });
+      assert.deepEqual(calls.map((c) => c.url), [API, 'https://api.emailjs.com/api/v1.0/email/send']);
+    });
+  });
+}
+
+test('API network failure falls back to EmailJS', async () => {
+  const original = globalThis.fetch;
+  const urls = [];
+  globalThis.fetch = async (url) => { urls.push(String(url)); if (String(url) === API) throw new TypeError('network'); return new Response('OK'); };
+  try {
+    await submitLead(talkLead, { apiUrl: API });
+    assert.deepEqual(urls, [API, 'https://api.emailjs.com/api/v1.0/email/send']);
+  } finally { globalThis.fetch = original; }
+});
+
+test('API 400 and 429 are real answers: thrown, with no EmailJS fallback', async () => {
+  await withFetch((url) => new Response(JSON.stringify({ ok: false, error: 'INVALID' }), { status: 400 }), async (calls) => {
+    await assert.rejects(submitLead(talkLead, { apiUrl: API }), /INVALID_TALK_TO_TEAM/);
+    assert.equal(calls.length, 1);
+  });
+  await withFetch(() => new Response(JSON.stringify({ ok: false, error: 'RATE_LIMITED' }), { status: 429 }), async (calls) => {
+    await assert.rejects(submitLead(talkLead, { apiUrl: API }), /RATE_LIMITED/);
+    assert.equal(calls.length, 1);
+  });
+});
+
+test('both API and EmailJS failing is reported as a failure, not success', async () => {
+  await withFetch(() => new Response('x', { status: 500 }), async () => {
+    await assert.rejects(submitLead(talkLead, { apiUrl: API }), /SUBMIT_FAILED/);
+  });
+});

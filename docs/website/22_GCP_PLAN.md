@@ -12,6 +12,8 @@ Status: **decisions made, config prepared, nothing deployed.** See `23_GCP_SETUP
 | Move to Firebase Hosting | **Yes** |
 | Data region | **`africa-south1` (Johannesburg)** for stored data; honest limits in the runbook's residency table |
 
+**Phase 2 (lead endpoint) is built and unit-tested but not deployed:** `artifacts/lead-api`, runbook section 6. Sender defaults to `info@qualitracker.com` (one env var to change).
+
 Prepared on `dev`: `firebase.json` (headers, caching, trailing slashes, 404; tested on the local hosting emulator), `.firebaserc`, `.github/workflows/firebase-hosting.yml` (manual, preview-only). Written on `dev` after the framework audit (21_*). I cannot see the QualiTracker GCP project from the dev machine (no `gcloud`, no GCP config in the repo), so anything about the account is an **assumption** until confirmed.
 
 ## Facts needed from the team (blocks Phase 1+)
