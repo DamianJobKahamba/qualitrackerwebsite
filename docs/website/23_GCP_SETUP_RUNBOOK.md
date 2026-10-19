@@ -43,10 +43,10 @@ gcloud iam workload-identity-pools create github --location=global --display-nam
 gcloud iam workload-identity-pools providers create-oidc github-oidc --location=global \
   --workload-identity-pool=github --issuer-uri=https://token.actions.githubusercontent.com \
   --attribute-mapping='google.subject=assertion.sub,attribute.repository=assertion.repository' \
-  --attribute-condition="assertion.repository=='DamianJobKahamba/qualitrackerwebsite'"
+  --attribute-condition="assertion.repository=='Qualitracker/qualitrackerwebsite'"
 gcloud iam service-accounts add-iam-policy-binding $SA \
   --role=roles/iam.workloadIdentityUser \
-  --member="principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/attribute.repository/DamianJobKahamba/qualitrackerwebsite"
+  --member="principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/attribute.repository/Qualitracker/qualitrackerwebsite"
 echo "GCP_SERVICE_ACCOUNT=$SA"
 echo "GCP_WORKLOAD_IDENTITY_PROVIDER=projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/providers/github-oidc"
 ```
@@ -60,9 +60,10 @@ GitHub > Actions > "Firebase Hosting preview" > Run workflow (branch `dev`, chan
 ## 4. Custom-domain cutover (live site) — only after step 3 is happy
 
 Findings on `qualitracker.com` (public DNS lookups, 2026-10-19), corrected after the team confirmed the website itself was moved off Hostinger to GitHub Pages:
-- **The website is served from GitHub Pages** (`A` records `185.199.108-111.153`; `www` is a CNAME to `damianjobkahamba.github.io`). Hosting is no longer at Hostinger.
+- **The website is served from GitHub Pages** (`A` records `185.199.108-111.153`; `www` is a CNAME to `DamianJobKahamba.github.io`, which no longer matches the repo's new owner). Hosting is no longer at Hostinger. **As of 2026-10-19 the apex and `www` return HTTP 404 from GitHub because the Pages custom domain was removed while DNS still points at GitHub: the site is down until the Firebase cutover (or Pages is re-enabled).**
 - **The DNS zone is still at Hostinger.** The nameservers are `orbit`/`horizon.dns-parking.com` and the zone's SOA names `dns.hostinger.com` (last changed 2026-10-15). Hosting and DNS are separate: the records are still edited in Hostinger's DNS panel until the nameservers are changed at the registrar. Who the registrar is could not be determined (whois returned nothing); check where the domain is registered/renewed.
 - **Do not cancel or let lapse the Hostinger account until the DNS has been moved (or confirmed to survive).** If the DNS zone disappears with it, the website and email stop working. Either keep the zone there, or move the nameservers (e.g. to Cloud DNS in this project) first and copy every record across.
+- **Other records in the Hostinger zone that must be preserved** (from the exported zone file): `chat`, `dev.chat`, `demochallenge`, `qualitychallenge` -> `A 5.189.158.117` (some other server; owner to confirm); `google._domainkey` TXT (Google Workspace DKIM); `_dmarc` TXT `v=DMARC1; p=none` (monitor-only, no report address); `autoconfig`/`autodiscover` CNAMEs to Hostinger mail (suggests Hostinger mailboxes may still exist; confirm before dropping the SPF include). Only the 4 apex `A` records and the `www` CNAME change at cutover.
 - **Email is live and must not break:** `MX` -> Google (`SMTP.GOOGLE.com`); SPF `TXT` includes both `_spf.mail.hostinger.com` and `_spf.google.com`; a Google site-verification `TXT` exists. If no mail is sent through Hostinger any more, the Hostinger SPF include can be removed later; confirm first.
 
 Steps: Firebase Console > Hosting > Add custom domain (`qualitracker.com` and `www`). Firebase shows the exact records. Then, in the DNS editor (Hostinger's DNS panel, unless the nameservers have been moved): lower the TTL on the `A`/`CNAME` records a day ahead; replace **only** the `A` (and `www` `CNAME`) records with Firebase's values; add Firebase's verification `TXT` alongside what exists; **do not edit `MX` or the existing `TXT` records.** TLS certificates are issued automatically (can take minutes to hours). Rollback = restore the old GitHub `A` records. After it is stable, disable `static.yml` (or leave it, it only serves the old `github.io` address).
