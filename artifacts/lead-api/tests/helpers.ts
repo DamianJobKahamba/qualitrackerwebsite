@@ -6,7 +6,7 @@ export const NOW = new Date('2026-11-02T10:00:00Z');
 
 export const config: Config = {
   allowedOrigins: ['https://qualitracker.com'],
-  allowedOriginPattern: /^https:\/\/peppy-house-510317-n5--[a-z0-9-]+\.web\.app$/,
+  allowedOriginPattern: /^https:\/\/qualitracker-website-e6c53--[a-z0-9-]+\.web\.app$/,
   mailTo: 'info@qualitracker.com',
   mailSender: 'info@qualitracker.com',
   hashSalt: 'test-salt-test-salt-test-salt',

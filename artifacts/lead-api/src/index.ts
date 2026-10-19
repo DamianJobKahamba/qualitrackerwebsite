@@ -17,7 +17,7 @@ function loadConfig(env: NodeJS.ProcessEnv): Config {
     allowedOrigins: (env.ALLOWED_ORIGINS ?? 'https://qualitracker.com,https://www.qualitracker.com')
       .split(',').map((s) => s.trim()).filter(Boolean),
     // Firebase Hosting preview channels look like https://<project>--<channel>-<hash>.web.app
-    allowedOriginPattern: new RegExp(env.ALLOWED_ORIGIN_REGEX ?? '^https://peppy-house-510317-n5--[a-z0-9-]+\\.web\\.app$'),
+    allowedOriginPattern: new RegExp(env.ALLOWED_ORIGIN_REGEX ?? '^https://qualitracker-website-e6c53--[a-z0-9-]+\\.web\\.app$'),
     mailTo: env.MAIL_TO ?? 'info@qualitracker.com',
     // The mailbox the function impersonates (must be a real Workspace user). Change this one
     // setting to move to a dedicated sender address.

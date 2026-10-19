@@ -1,4 +1,4 @@
-# GCP setup runbook (project `peppy-house-510317-n5`)
+# GCP setup runbook (project `qualitracker-website-e6c53`, decided 2026-10-19)
 
 Steps **a person with Owner access runs** in a terminal with `gcloud`/`firebase` (or Cloud Shell). They cannot be run from the dev machine used for the code changes: `gcloud` is not installed there and the stored Firebase login has expired. Nothing here has been run yet.
 
@@ -8,8 +8,8 @@ Companion to `22_GCP_PLAN.md`. Region decision: **`africa-south1` (Johannesburg)
 
 ```bash
 firebase login --reauth                       # browser sign-in as an Owner of the project
-firebase projects:addfirebase peppy-house-510317-n5
-gcloud config set project peppy-house-510317-n5
+# (already a Firebase project: no addfirebase needed)
+gcloud config set project qualitracker-website-e6c53
 gcloud services enable firebase.googleapis.com firebasehosting.googleapis.com \
   firestore.googleapis.com cloudfunctions.googleapis.com run.googleapis.com \
   cloudbuild.googleapis.com artifactregistry.googleapis.com secretmanager.googleapis.com \
@@ -33,7 +33,7 @@ Regional (not multi-region) is chosen: lower cost and write latency, 99.99% SLA 
 ## 2. Keyless GitHub -> GCP deploys (Workload Identity Federation)
 
 ```bash
-PROJECT=peppy-house-510317-n5
+PROJECT=qualitracker-website-e6c53
 PROJECT_NUMBER=$(gcloud projects describe $PROJECT --format='value(projectNumber)')
 gcloud iam service-accounts create gh-hosting-deploy --display-name="GitHub Hosting preview deploy"
 SA=gh-hosting-deploy@$PROJECT.iam.gserviceaccount.com
@@ -79,7 +79,7 @@ What it does: the three website forms POST to this Cloud Run function in **Johan
 **Sender decision:** it sends as `info@qualitracker.com` (the one mailbox known to exist) via `MAIL_SENDER`. To use a dedicated address, create that Workspace user, then change the one env var and the delegation `sub` follows automatically.
 
 ```bash
-PROJECT=peppy-house-510317-n5
+PROJECT=qualitracker-website-e6c53
 REGION=africa-south1
 SA_NAME=lead-api
 SA=$SA_NAME@$PROJECT.iam.gserviceaccount.com
@@ -146,7 +146,7 @@ Then Console > Monitoring > Alerting > Create policy on metric `lead_api_errors`
 **Critical fact: Hostinger is also the domain REGISTRAR** (public registry lookup: registrar "HOSTINGER operations, UAB"; registered 2026-08-04, expires 2027-08-04; status `client transfer prohibited`, i.e. the transfer lock is on). Cancelling or letting the Hostinger account lapse before the domain is transferred out would put `qualitracker.com` at risk. Order matters:
 
 1. **Restore the site first (Phase A, urgent: apex and `www` are both down as of 2026-10-19).**
-   - Firebase currently has a hosting site `qualitracker-website-e6c53` (empty: serves "Site Not Found"; `www.qualitracker.com` is already listed as a custom domain there) **and** the GCP project `peppy-house-510317-n5` was given for everything else. Decide on ONE project (see "Project decision" below), deploy the built site, then add `qualitracker.com` + `www` as custom domains.
+   - The Firebase site `qualitracker-website-e6c53` currently serves "Site Not Found" (nothing deployed to its live channel); `www.qualitracker.com` is already listed as a custom domain there. Deploy the built site to its live channel, then add/confirm `qualitracker.com` + `www` as custom domains.
    - Firebase shows the exact records. In Hostinger's DNS panel replace only the 4 apex `A` records and (re)create `www`; add Firebase's verification `TXT`. Leave every other record alone.
 2. **Move DNS to Google (Cloud DNS in the chosen project).** Create the zone, copy every record from the exported zone file (`/Users/justinmafie/Downloads/qualitracker.com.txt`, re-export first because its serial was older than the live one), check each with `dig @<cloud-dns-ns>`, then change the nameservers at Hostinger (registrar) to the Cloud DNS ones. Domain stays registered at Hostinger for now.
 3. **Move the 4 extra subdomains' apps** (`chat`, `dev.chat`, `demochallenge`, `qualitychallenge` -> `5.189.158.117`) wherever they are going, then update those records in Cloud DNS. That server is not at Hostinger as far as can be told (not verified); confirm its host before deleting anything.
@@ -154,7 +154,7 @@ Then Console > Monitoring > Alerting > Create policy on metric `lead_api_errors`
 5. **Mail:** all mail is on Google Workspace (confirmed by the team). Before removing anything, make sure no mailbox/forwarder/old mail still lives at Hostinger (export it if so). Then remove `include:_spf.mail.hostinger.com` from the SPF `TXT` and the `autoconfig`/`autodiscover` CNAMEs. Leave the `MX`, `google._domainkey` DKIM and Google site-verification records untouched. Consider tightening DMARC from `p=none` to `quarantine` with an `rua=` report address after a few weeks of clean reports.
 6. **Only then cancel Hostinger hosting/email/VPS plans.** Last, confirm the domain's registrar is no longer Hostinger and DNS answers come from the Google nameservers before closing the account.
 
-**Project decision (needs the owner's answer after `firebase login --reauth` as the info@ organisation account):** `firebase projects:list` should show both `qualitracker-website-e6c53` and `peppy-house-510317-n5`. Use one project for hosting, Firestore (`africa-south1`), the lead function, secrets and DNS. Prefer whichever already has billing attached and is owned by the organisation; replace `peppy-house-510317-n5` in `.firebaserc`, the workflow and this runbook if the other one wins. Two projects would split billing, IAM and data for no benefit.
+**Project decision (made 2026-10-19):** one project, `qualitracker-website-e6c53`, for hosting, Firestore (`africa-south1`), the lead function, secrets and DNS. Two other projects are unused and can be deleted by the owner later, after confirming nothing is attached: `qualitracker-website` (an empty duplicate) and the GCP project `peppy-house-510317-n5` (never a Firebase project). Confirm billing is attached to `qualitracker-website-e6c53` before enabling Firestore or deploying the function.
 
 ## What stays in Africa and what doesn't
 

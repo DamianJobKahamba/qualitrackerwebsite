@@ -6,7 +6,7 @@ Status: **decisions made, config prepared, nothing deployed.** See `23_GCP_SETUP
 
 | Question | Answer |
 |---|---|
-| GCP project | `peppy-house-510317-n5` (billing contact given as `info@qualitrqacker.com` — looks like a typo, to confirm) |
+| Project | **`qualitracker-website-e6c53`** (decided 2026-10-19; it already has the Firebase web app and the `www` custom domain entry). The earlier GCP project `peppy-house-510317-n5` is not a Firebase project and is not used. A duplicate Firebase project `qualitracker-website` also exists and is unused. Billing contact: `info@qualitracker.com` |
 | Google Workspace | **Yes** (public DNS also shows Google `MX`) -> Gmail API / Calendar options open |
 | Who controls DNS | Team said the site moved off Hostinger to GitHub Pages (confirmed: `A` records point to GitHub). **The DNS zone itself is still at Hostinger** (SOA `dns.hostinger.com`); registrar unknown. Do not cancel Hostinger before DNS is moved |
 | Move to Firebase Hosting | **Yes** |

@@ -100,9 +100,9 @@ test('preflight from the site and from a Firebase preview channel succeeds', asy
   const ok = await call(h, { method: 'OPTIONS', headers: { origin: 'https://qualitracker.com' } });
   assert.equal(ok.status, 204);
   assert.match(ok.headers['access-control-allow-headers'], /Content-Type/);
-  const preview = await call(h, { method: 'OPTIONS', headers: { origin: 'https://peppy-house-510317-n5--dev-ab12cd34.web.app' } });
+  const preview = await call(h, { method: 'OPTIONS', headers: { origin: 'https://qualitracker-website-e6c53--dev-ab12cd34.web.app' } });
   assert.equal(preview.status, 204);
-  const lookalike = await call(h, { method: 'OPTIONS', headers: { origin: 'https://peppy-house-510317-n5--dev.web.app.evil.example' } });
+  const lookalike = await call(h, { method: 'OPTIONS', headers: { origin: 'https://qualitracker-website-e6c53--dev.web.app.evil.example' } });
   assert.equal(lookalike.status, 403);
 });
 

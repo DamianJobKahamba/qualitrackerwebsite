@@ -9,7 +9,7 @@ name: Firebase Hosting preview
 # Needs two repository *variables* (Settings > Secrets and variables > Actions
 # > Variables), created by the runbook. No JSON key is stored in GitHub:
 #   GCP_WORKLOAD_IDENTITY_PROVIDER  projects/<number>/locations/global/workloadIdentityPools/<pool>/providers/<provider>
-#   GCP_SERVICE_ACCOUNT             <name>@peppy-house-510317-n5.iam.gserviceaccount.com
+#   GCP_SERVICE_ACCOUNT             <name>@qualitracker-website-e6c53.iam.gserviceaccount.com
 on:
   workflow_dispatch:
     inputs:
@@ -57,4 +57,4 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
       - name: Deploy to preview channel (expires in 7 days)
-        run: npx --yes firebase-tools@15 hosting:channel:deploy "${{ inputs.channel }}" --project peppy-house-510317-n5 --expires 7d
+        run: npx --yes firebase-tools@15 hosting:channel:deploy "${{ inputs.channel }}" --project qualitracker-website-e6c53 --expires 7d
