@@ -141,6 +141,21 @@ Then Console > Monitoring > Alerting > Create policy on metric `lead_api_errors`
 
 **Spam protection in place vs. not:** honeypot, origin allow-list, size/type limits, strict validation, per-IP and per-email rate limits. **Not in place:** a CAPTCHA / reCAPTCHA Enterprise check. A determined bot using real browsers or rotating IPs can still submit; if spam appears, add reCAPTCHA Enterprise (needs a key created in the console, a script allowed in the CSP, and a privacy-notice update).
 
+## 7. Leaving Hostinger (decided 2026-10-19: everything on Google; Hostinger to be cancelled)
+
+**Critical fact: Hostinger is also the domain REGISTRAR** (public registry lookup: registrar "HOSTINGER operations, UAB"; registered 2026-08-04, expires 2027-08-04; status `client transfer prohibited`, i.e. the transfer lock is on). Cancelling or letting the Hostinger account lapse before the domain is transferred out would put `qualitracker.com` at risk. Order matters:
+
+1. **Restore the site first (Phase A, urgent: apex and `www` are both down as of 2026-10-19).**
+   - Firebase currently has a hosting site `qualitracker-website-e6c53` (empty: serves "Site Not Found"; `www.qualitracker.com` is already listed as a custom domain there) **and** the GCP project `peppy-house-510317-n5` was given for everything else. Decide on ONE project (see "Project decision" below), deploy the built site, then add `qualitracker.com` + `www` as custom domains.
+   - Firebase shows the exact records. In Hostinger's DNS panel replace only the 4 apex `A` records and (re)create `www`; add Firebase's verification `TXT`. Leave every other record alone.
+2. **Move DNS to Google (Cloud DNS in the chosen project).** Create the zone, copy every record from the exported zone file (`/Users/justinmafie/Downloads/qualitracker.com.txt`, re-export first because its serial was older than the live one), check each with `dig @<cloud-dns-ns>`, then change the nameservers at Hostinger (registrar) to the Cloud DNS ones. Domain stays registered at Hostinger for now.
+3. **Move the 4 extra subdomains' apps** (`chat`, `dev.chat`, `demochallenge`, `qualitychallenge` -> `5.189.158.117`) wherever they are going, then update those records in Cloud DNS. That server is not at Hostinger as far as can be told (not verified); confirm its host before deleting anything.
+4. **Transfer the domain registration** out of Hostinger to a Google-side registrar (Cloud Domains in this project, if it supports `.com` transfers for your account; confirm in the console). At Hostinger: turn off the domain lock, disable privacy/proxy if it blocks it, and request the transfer (EPP/auth) code. **Never paste the code into chat or commit it**; enter it only in the registrar's transfer form. Expect several days; Hostinger may refuse transfers if the registrant details were changed in the last 60 days (the record shows a change on 2026-10-19), in which case ask them to waive it or wait. Keep the domain renewed until the transfer completes.
+5. **Mail:** all mail is on Google Workspace (confirmed by the team). Before removing anything, make sure no mailbox/forwarder/old mail still lives at Hostinger (export it if so). Then remove `include:_spf.mail.hostinger.com` from the SPF `TXT` and the `autoconfig`/`autodiscover` CNAMEs. Leave the `MX`, `google._domainkey` DKIM and Google site-verification records untouched. Consider tightening DMARC from `p=none` to `quarantine` with an `rua=` report address after a few weeks of clean reports.
+6. **Only then cancel Hostinger hosting/email/VPS plans.** Last, confirm the domain's registrar is no longer Hostinger and DNS answers come from the Google nameservers before closing the account.
+
+**Project decision (needs the owner's answer after `firebase login --reauth` as the info@ organisation account):** `firebase projects:list` should show both `qualitracker-website-e6c53` and `peppy-house-510317-n5`. Use one project for hosting, Firestore (`africa-south1`), the lead function, secrets and DNS. Prefer whichever already has billing attached and is owned by the organisation; replace `peppy-house-510317-n5` in `.firebaserc`, the workflow and this runbook if the other one wins. Two projects would split billing, IAM and data for no benefit.
+
 ## What stays in Africa and what doesn't
 
 | Item | Location | Note |
