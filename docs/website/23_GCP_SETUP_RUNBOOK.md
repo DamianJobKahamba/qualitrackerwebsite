@@ -70,6 +70,9 @@ Steps: Firebase Console > Hosting > Add custom domain (`qualitracker.com` and `w
 
 ## 5. Enforce security headers
 
+**Check right after the custom domain goes live:** on the `web.app` address Firebase adds its own `Strict-Transport-Security: max-age=31556926; includeSubDomains; preload`, which overrides ours. Run `curl -sI https://qualitracker.com | grep -i strict-transport`. If it shows `includeSubDomains`, browsers will refuse plain-HTTP access to every subdomain (`chat`, `dev.chat`, `demochallenge`, `qualitychallenge`) for a year after they visit the main site, so those must serve valid HTTPS first. Do not add the domain to the browser preload list until you are sure.
+
+
 `firebase.json` ships `Content-Security-Policy-Report-Only`. After a few days of real traffic on the preview/live site with no console violations, rename the header key to `Content-Security-Policy`. Add `includeSubDomains`/`preload` to HSTS only once every subdomain of `qualitracker.com` is HTTPS-only (it currently sets `max-age=31536000` only).
 
 ## 6. Deploy the lead endpoint (`artifacts/lead-api`)
