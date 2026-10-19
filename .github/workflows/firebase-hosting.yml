@@ -1,0 +1,58 @@
+name: Firebase Hosting preview
+
+# PREVIEW ONLY, MANUAL ONLY. Deploys the built site to a temporary Firebase
+# Hosting preview channel so changes on `dev` can be tested on a real URL
+# before merging to `main`. It never touches the live site: the live domain
+# still deploys from static.yml (GitHub Pages) until the cutover in
+# docs/website/23_GCP_SETUP_RUNBOOK.md is done.
+#
+# Needs two repository *variables* (Settings > Secrets and variables > Actions
+# > Variables), created by the runbook. No JSON key is stored in GitHub:
+#   GCP_WORKLOAD_IDENTITY_PROVIDER  projects/<number>/locations/global/workloadIdentityPools/<pool>/providers/<provider>
+#   GCP_SERVICE_ACCOUNT             <name>@peppy-house-510317-n5.iam.gserviceaccount.com
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Preview channel name (becomes part of the URL)
+        default: dev
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: firebase-preview-${{ inputs.channel }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Chrome for prerendering
+        run: pnpm --filter @workspace/qualitracker-website exec puppeteer browsers install chrome
+      - name: Build website
+        env:
+          BASE_PATH: /
+        run: pnpm --filter @workspace/qualitracker-website build
+      - name: Authenticate to Google Cloud (keyless)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - name: Deploy to preview channel (expires in 7 days)
+        run: npx --yes firebase-tools@15 hosting:channel:deploy "${{ inputs.channel }}" --project peppy-house-510317-n5 --expires 7d

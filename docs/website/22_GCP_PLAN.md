@@ -1,6 +1,18 @@
 # QualiTracker Website — Google Cloud Plan
 
-Status: **proposal, nothing deployed.** Written on `dev` after the framework audit (21_*). I cannot see the QualiTracker GCP project from the dev machine (no `gcloud`, no GCP config in the repo), so anything about the account is an **assumption** until confirmed.
+Status: **decisions made, config prepared, nothing deployed.** See `23_GCP_SETUP_RUNBOOK.md` for the steps an Owner runs.
+
+## Decisions (2026-10-19)
+
+| Question | Answer |
+|---|---|
+| GCP project | `peppy-house-510317-n5` (billing contact given as `info@qualitrqacker.com` — looks like a typo, to confirm) |
+| Google Workspace | **Yes** (public DNS also shows Google `MX`) -> Gmail API / Calendar options open |
+| Who controls DNS | Team believes Google; **public lookup shows `dns-parking.com` nameservers (appears to be Hostinger).** To confirm before cutover |
+| Move to Firebase Hosting | **Yes** |
+| Data region | **`africa-south1` (Johannesburg)** for stored data; honest limits in the runbook's residency table |
+
+Prepared on `dev`: `firebase.json` (headers, caching, trailing slashes, 404; tested on the local hosting emulator), `.firebaserc`, `.github/workflows/firebase-hosting.yml` (manual, preview-only). Written on `dev` after the framework audit (21_*). I cannot see the QualiTracker GCP project from the dev machine (no `gcloud`, no GCP config in the repo), so anything about the account is an **assumption** until confirmed.
 
 ## Facts needed from the team (blocks Phase 1+)
 
@@ -9,7 +21,7 @@ Status: **proposal, nothing deployed.** Written on `dev` after the framework aud
 | 1 | GCP project ID, billing account, who is Owner | Everything below lives in one project |
 | 2 | Is `info@qualitracker.com` a **Google Workspace** mailbox? | Decides the email-sending and calendar options (Phases 2 and 4) |
 | 3 | Who controls DNS for `qualitracker.com`? | Needed to point the domain at GCP and to verify email sending |
-| 4 | Is GitHub Pages staying as the host, or moving? | Phase 1 recommends moving; Pages can't set security headers |
+| 4 | Is GitHub Pages staying as the host, or moving? | **Answered: moving to Firebase Hosting** |
 
 ## What GCP fixes in the audit
 
