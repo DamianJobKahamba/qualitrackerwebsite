@@ -159,6 +159,41 @@ Then Console > Monitoring > Alerting > Create policy on metric `lead_api_errors`
 
 **Project decision (made 2026-10-19):** one project, `qualitracker-website-e6c53`, for hosting, Firestore (`africa-south1`), the lead function, secrets and DNS. Two other projects are unused and can be deleted by the owner later, after confirming nothing is attached: `qualitracker-website` (an empty duplicate) and the GCP project `peppy-house-510317-n5` (never a Firebase project). Confirm billing is attached to `qualitracker-website-e6c53` before enabling Firestore or deploying the function.
 
+## 8. Everything on Google Cloud (decided 2026-10-20: nothing left at Hostinger)
+
+**Status 2026-10-20:** the website is live on Firebase Hosting at `qualitracker.com` and `www` (verified: all 10 pages, sitemap, robots, 404 page, certificate, security headers). DNS and the domain registration are still at Hostinger. The other sites/apps (`chat`, `dev.chat`, `demochallenge`, `qualitychallenge`) run on **a Contabo server in Germany (`5.189.158.117`), not at Hostinger**; the team owns and maintains them and wants them on GCP too.
+
+### 8a. DNS to Cloud DNS (no downtime if done in this order)
+`docs/dns/qualitracker.com.zone` is the target zone, generated from the live Hostinger answers. Review it, then (Owner, with gcloud or Cloud Shell; billing must be attached):
+```bash
+gcloud config set project qualitracker-website-e6c53
+gcloud services enable dns.googleapis.com
+gcloud dns managed-zones create qualitracker-com --dns-name=qualitracker.com. --description="qualitracker.com"
+gcloud dns record-sets import docs/dns/qualitracker.com.zone --zone=qualitracker-com --zone-file-format
+gcloud dns managed-zones describe qualitracker-com --format='value(nameServers)'   # the 4 Google nameservers
+```
+Then **compare before switching**: for every name in the zone, `dig @<one of those nameservers> <type> <name>` must match what Hostinger answers today (apex A/MX/TXT, `www` CNAME, `_dmarc`, `google._domainkey`, the four subdomains). Only when identical, change the nameservers at Hostinger's registrar page to the four Google ones. Delegation changes can take up to 48 hours; keep the Hostinger zone unchanged until the switch has fully propagated and mail has been tested (send and receive on `info@`). After the switch every DNS edit is made in Cloud DNS, not Hostinger.
+
+Deliberately not carried over: the Hostinger mail helper CNAMEs (`autoconfig`, `autodiscover`). The SPF record is copied unchanged; remove `include:_spf.mail.hostinger.com` later once stable.
+
+### 8b. Domain registration to Google
+See section 7, step 4. Offer is Cloud Domains if it supports a `.com` transfer for the account (not verified; confirm in the console). The transfer needs the Hostinger transfer lock turned off and the transfer code, entered only in the registrar's own form. Do this after 8a is stable. The registration expires 2027-08-04; do not let it lapse during the move.
+
+### 8c. Move the Contabo apps to GCP
+Not started. Needs an inventory first, which the team can produce on the server without sharing any secrets:
+```bash
+sudo ss -tlnp                              # what is listening and on which port
+sudo docker ps 2>/dev/null                 # containers, if any
+systemctl list-units --type=service --state=running --no-pager | head -40
+ls /etc/nginx/sites-enabled                # which sites nginx serves
+sudo crontab -l; crontab -l                # scheduled jobs
+df -h; free -m                             # disk and memory used
+```
+Do NOT paste `.env` files, keys or database dumps anywhere. Findings so far (public, read-only): ports 22/80/443 are open; `chat.qualitracker.com` answers from nginx on Ubuntu and currently serves a page titled like the main QualiTracker site; `dev.chat` returned no HTTPS response; `demochallenge` / `qualitychallenge` have no DNS records but the server answers for the `qualitychallenge` host name. Likely GCP targets: static sites to Firebase Hosting (a second site in the same project); apps in containers to Cloud Run; stateful apps/databases to a Compute Engine VM or Cloud SQL. Choose per app after the inventory. Until each app has moved, keep its DNS record in `docs/dns/qualitracker.com.zone` pointing at `5.189.158.117`, and keep the Contabo server running.
+
+### 8d. Finally
+Only when DNS answers come from Google, the registrar is no longer Hostinger, and mail has been tested: cancel the Hostinger plans. Keep the backup bundles in `~/Backups/qualitracker-2026-10-19`.
+
 ## What stays in Africa and what doesn't
 
 | Item | Location | Note |
