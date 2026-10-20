@@ -179,17 +179,21 @@ Deliberately not carried over: the Hostinger mail helper CNAMEs (`autoconfig`, `
 ### 8b. Domain registration to Google
 See section 7, step 4. Offer is Cloud Domains if it supports a `.com` transfer for the account (not verified; confirm in the console). The transfer needs the Hostinger transfer lock turned off and the transfer code, entered only in the registrar's own form. Do this after 8a is stable. The registration expires 2027-08-04; do not let it lapse during the move.
 
-### 8c. Move the Contabo apps to GCP
-Not started. Needs an inventory first, which the team can produce on the server without sharing any secrets:
-```bash
-sudo ss -tlnp                              # what is listening and on which port
-sudo docker ps 2>/dev/null                 # containers, if any
-systemctl list-units --type=service --state=running --no-pager | head -40
-ls /etc/nginx/sites-enabled                # which sites nginx serves
-sudo crontab -l; crontab -l                # scheduled jobs
-df -h; free -m                             # disk and memory used
-```
-Do NOT paste `.env` files, keys or database dumps anywhere. Findings so far (public, read-only): ports 22/80/443 are open; `chat.qualitracker.com` answers from nginx on Ubuntu and currently serves a page titled like the main QualiTracker site; `dev.chat` returned no HTTPS response; `demochallenge` / `qualitychallenge` have no DNS records but the server answers for the `qualitychallenge` host name. Likely GCP targets: static sites to Firebase Hosting (a second site in the same project); apps in containers to Cloud Run; stateful apps/databases to a Compute Engine VM or Cloud SQL. Choose per app after the inventory. Until each app has moved, keep its DNS record in `docs/dns/qualitracker.com.zone` pointing at `5.189.158.117`, and keep the Contabo server running.
+### 8c. The MeLSAT challenge sites (`qualitychallenge`, `demochallenge`) and the Contabo server
+**What they are (found by read-only public requests, 2026-10-20):**
+- `qualitychallenge.qualitracker.com`: "Register - MELSAT Laboratory Quality Excellence Challenge". `demochallenge.qualitracker.com`: "Practice Quiz". Both are the same small front-end (HTML/JS/CSS, ~210 KB, shared `shared/` assets) in front of **a Node/Express backend at `/api`** behind nginx on the Contabo server `5.189.158.117`.
+- Backend endpoints seen in the page code: `/challenge-status`, `/register`, `/check-email`, `/facilities/search`, `/quiz/start`, `/quiz/submit`, `/auth/staff-login`, `/leaderboard/{summary,top,groups}`. So the server holds **registrations (names, emails, facilities), tokens, quiz scores and a staff login**: personal data, and probably the only copy.
+- **The challenge is closed:** `/api/challenge-status` reports `closed: true`, closing 2026-09-24 13:00 UTC (16:00 East African Time). The closed message says QualiTracker "will be running more quality challenges in future", so the app may be reused.
+- Other facts: the API sends `Access-Control-Allow-Origin: *`; `demochallenge` presents the **`qualitychallenge` certificate** (name mismatch, browsers would warn); Let's Encrypt certificates expire 2026-11-23 (`chat`) and 2026-12-06 (`qualitychallenge`) and, with the DNS records deleted, their automatic renewal cannot succeed. None of this matters once the apps move.
+- **Source code:** not found in any repository visible to this account. `DamianJobKahamba/qualitrackerquiz` is an *earlier* Google Sheets + Apps Script version, not this one. The current backend source and database are most likely only on the server.
+
+**Plan (safest order):**
+1. **Back up first, before touching DNS or anything else.** On the server, the team finds the app folder and database and copies both (code, `.env` excluded from chat, a database dump or file copy) into a private Cloud Storage bucket in `africa-south1`, plus one offline copy. Inventory commands are in the section above ("Do NOT paste .env files, keys or database dumps").
+2. **Restore the DNS records only if the sites must be reachable meanwhile** (`A demochallenge` and `A qualitychallenge` -> `5.189.158.117`, already in `docs/dns/qualitracker.com.zone`). Otherwise leave them off.
+3. **Decide archive vs. keep running** (needs the team's answer):
+   - *Archive (simplest, cheapest):* export the final results to static files, host each site as a **static Firebase Hosting site** in this project at the same hostnames, show the "closed" message and the final dashboard. No backend, no server, no renewals. Participant personal data stays in a private bucket under a stated retention period, not on the public site.
+   - *Keep running for the next challenge:* containerise the Express backend for **Cloud Run** (`africa-south1`) with the data in Firestore or Cloud SQL, and the front-end on Firebase Hosting with `/api` rewritten to it (only if Hosting supports that region for rewrites, which it did not for `africa-south1`; otherwise call the Cloud Run URL directly as the lead endpoint does). Needs the source code and a database export first.
+4. After both sites are on Google and verified, repeat for `chat` / `dev.chat`, then retire the Contabo server.
 
 ### 8d. Finally
 Only when DNS answers come from Google, the registrar is no longer Hostinger, and mail has been tested: cancel the Hostinger plans. Keep the backup bundles in `~/Backups/qualitracker-2026-10-19`.
