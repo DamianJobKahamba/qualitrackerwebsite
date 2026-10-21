@@ -58,6 +58,20 @@ Browser -> backend: Firebase Hosting rewrites do not list `africa-south1`, so th
 
 **After tomorrow:** (a) containerise and deploy the challenge backend, import the data, point both front-ends at it, test a full registration and quiz on a preview, (b) switch nameservers to Cloud DNS, (c) start the registrar transfer, (d) move `chat`/`dev.chat`, (e) run both old and new side by side for **14 days**, (f) only then cancel Contabo and Hostinger. Keep the backups for at least 12 months unless a data-retention decision says otherwise.
 
+## 4a. Phase order (team decision, 2026-10-20)
+
+**Correction that shapes it:** the demo and quality challenge sites do **not** run on Hostinger. They run on the Contabo server (`5.189.158.117`, verified: it answers for both host names). Hostinger holds only the domain registration and DNS. So "moving the challenges to Google" *is* the first part of moving off the Contabo VPS, and "leaving Hostinger" is a DNS/registrar job.
+
+| Phase | Scope | Done when |
+|---|---|---|
+| **1. Web properties on Google** | (a) main website: **done**, live on Firebase Hosting. (b) `demochallenge` and (c) `qualitychallenge`: front-end -> Firebase Hosting sites, backend -> Cloud Run, data -> Firestore/Cloud SQL, secrets -> Secret Manager, all in `africa-south1`. | Both challenge sites pass a full registration + quiz + leaderboard test on a preview and then on their real host names, served from Google. |
+| **2. The rest of the VPS** | `chat` / `dev.chat` and anything else the inventory finds on Contabo, then 14 days side by side. | Contabo receives no traffic for 7 days; backups verified; server cancelled. |
+| **3. Hostinger** | DNS -> Cloud DNS, registration -> Google (or another registrar), then cancel the plans. | Nameservers and registrar are no longer Hostinger. |
+
+**Gate to start Phase 1b/1c:** Damian's inventory and backup of the Contabo server (section 4, step 2) and the location of the challenge backend's source code. Without the source and the data, the challenge backend cannot be rebuilt on Google.
+
+**Recommendation: do the DNS move (Phase 3, first half) at the start of Phase 1, not the end.** Phase 1 needs several DNS changes (verification and routing records for the two new Hosting sites, restoring the two missing host names). Doing them in Hostinger's panel means more manual edits and slow, uneven replication between its two nameservers (seen on 2026-10-19). With Cloud DNS the edits are made once, in Google, and are checked with `dig` straight away. The zone file is ready (`docs/dns/qualitracker.com.zone`); the switch needs the record-by-record comparison in runbook 8a and a mail test. The registrar transfer can still wait until the end.
+
 ## 5. Checklists
 
 **Hostinger (login owner)** - note the answers in this file:
