@@ -1,4 +1,4 @@
-export type LeadKind = 'newsletter' | 'demo_request' | 'waitlist' | 'talk_to_team';
+export type LeadKind = 'waitlist' | 'talk_to_team' | 'demo_request';
 
 export interface SubmitLeadInput {
   kind: LeadKind;
@@ -8,76 +8,204 @@ export interface SubmitLeadInput {
   institution?: string;
   role?: string;
   country?: string;
-  /** e.g. "Medical laboratory", "Multi-site network" — waitlist/talk-to-team only. */
+  /** e.g. "Medical laboratory", "Multi-site network" — waitlist only. */
   organizationType?: string;
-  /** Free-text context: waitlist detail, or a talk-to-team inquiry (prefix with its category). */
+  /** Free-text context: waitlist expectations, an inquiry (prefixed with its category), or demo notes. */
   message?: string;
-  source: string; // where on the site this came from, e.g. "homepage-hero", "footer"
+  /** demo_request only: ISO date (YYYY-MM-DD) the visitor would like, plus an optional backup. */
+  preferredDate?: string;
+  backupDate?: string;
+  /** demo_request only: e.g. "Morning (09:00–12:00)". */
+  preferredTime?: string;
+  /** demo_request only: IANA zone the visitor's times are in, e.g. "Africa/Dar_es_Salaam". */
+  timezone?: string;
+  source: string; // where on the site this came from, e.g. "waitlist-page"
   consent: boolean;
   /** Honeypot passthrough — leave undefined for real users. */
   website?: string;
 }
 
-// Simple honeypot field name shared with the backend. Rendered
-// visually hidden in the form; real users never see or fill it.
+// Simple honeypot field name. Rendered visually hidden in the form; real
+// users never see or fill it.
 export const HONEYPOT_FIELD_NAME = 'website';
 
-export async function submitLead(input: SubmitLeadInput): Promise<void> {
-  if (input.kind === 'waitlist') {
-    // EmailJS public identifiers are intended for browser use.
-    // Recipient and CC addresses are fixed in the EmailJS template.
-    if (input.website?.trim()) return;
-    const required = [input.firstName, input.email, input.institution,
-      input.organizationType, input.country, input.role, input.message];
-    if (required.some((value) => !value?.trim()) ||
-        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email.trim())) {
-      throw new Error('INVALID_WAITLIST');
-    }
-    const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        service_id: 'service_h8tr7y8',
-        template_id: 'template_v13pvti',
-        user_id: '0Iofba0xfrTcxdb3_',
-        template_params: {
-          full_name: [input.firstName, input.lastName].filter(Boolean).join(' ').trim(),
-          work_email: input.email.trim(),
-          organization: input.institution?.trim(),
-          organization_type: input.organizationType?.trim(),
-          country: input.country?.trim(),
-          role: input.role?.trim(),
-          expectations: input.message?.trim(),
-          submitted_at: new Date().toISOString(),
-        },
-      }),
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!response.ok) throw new Error('SUBMIT_FAILED');
-    return;
-  }
+const EMAILJS = {
+  endpoint: 'https://api.emailjs.com/api/v1.0/email/send',
+  serviceId: 'service_h8tr7y8',
+  // EmailJS public identifiers are intended for browser use.
+  publicKey: '0Iofba0xfrTcxdb3_',
+  templates: {
+    waitlist: 'template_v13pvti',
+    // INTERIM: talk-to-the-team and demo requests share the waitlist template,
+    // so the email's subject and "Source" line say "Waitlist" (the body is
+    // prefixed with the inquiry type / "DEMO REQUEST"). Create dedicated
+    // EmailJS templates (see docs/WAITLIST_EMAIL_SETUP.md) and change these
+    // IDs — no other code needs to change.
+    talk_to_team: 'template_v13pvti',
+    demo_request: 'template_v13pvti',
+  },
+} as const;
 
-  const params = new URLSearchParams(window.location.search);
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
-  const res = await fetch('/api/leads', {
+async function sendViaEmailJs(kind: LeadKind, params: Record<string, string | undefined>) {
+  // Recipient and CC addresses are fixed in the EmailJS template, never
+  // visitor-controlled; Reply-To is the visitor's work_email so the team can
+  // answer straight from their inbox.
+  const response = await fetch(EMAILJS.endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      ...input,
-      landingPage: window.location.pathname,
-      referrer: document.referrer || undefined,
-      utmSource: params.get('utm_source') ?? undefined,
-      utmMedium: params.get('utm_medium') ?? undefined,
-      utmCampaign: params.get('utm_campaign') ?? undefined,
-      utmTerm: params.get('utm_term') ?? undefined,
-      utmContent: params.get('utm_content') ?? undefined,
+      service_id: EMAILJS.serviceId,
+      template_id: EMAILJS.templates[kind],
+      user_id: EMAILJS.publicKey,
+      template_params: params,
     }),
+    signal: AbortSignal.timeout(15000),
   });
+  if (!response.ok) throw new Error('SUBMIT_FAILED');
+}
 
-  if (res.status === 409) {
-    throw new Error('ALREADY_SUBSCRIBED');
+/** "Tue, 3 Nov 2026" — computed from the ISO parts, never via a timezone-shifting Date parse. */
+export function formatDemoDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-GB', {
+    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC',
+  });
+}
+
+export interface SubmitLeadOptions {
+  /** Overrides VITE_LEAD_API_URL (used by tests). */
+  apiUrl?: string;
+}
+
+/** Thrown for answers that retrying elsewhere cannot fix (bad input, rate limit). */
+class LeadRejectedError extends Error {}
+
+/**
+ * Sends the lead to our own endpoint (Cloud Run function in Johannesburg: saves to Firestore, emails the
+ * team via Workspace) when VITE_LEAD_API_URL is set at build time. Returns false when the endpoint is
+ * unconfigured or unusable so the caller falls back to EmailJS and the lead is never lost:
+ * network error/timeout, 403 (origin not allowed), 404/405 (no such endpoint, e.g. GitHub Pages), 5xx.
+ * 400 and 429 are real answers (invalid input / rate limited) and are thrown, not retried elsewhere.
+ */
+async function sendViaLeadApi(input: SubmitLeadInput, apiUrl: string | undefined): Promise<boolean> {
+  if (!apiUrl) return false;
+  let response: Response;
+  try {
+    response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        kind: input.kind,
+        email: input.email.trim(),
+        firstName: [input.firstName, input.lastName].filter(Boolean).join(' ').trim(),
+        institution: input.institution,
+        role: input.role,
+        country: input.country,
+        organizationType: input.organizationType,
+        message: input.message,
+        preferredDate: input.preferredDate,
+        backupDate: input.backupDate,
+        preferredTime: input.preferredTime,
+        timezone: input.timezone,
+        source: input.source,
+        consent: input.consent,
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+  } catch {
+    return false;
   }
-  if (!res.ok) {
-    throw new Error('SUBMIT_FAILED');
+  if (response.ok) return true;
+  if (response.status === 400) {
+    const body = (await response.json().catch(() => ({}))) as { error?: string };
+    throw new LeadRejectedError(body.error === 'CONSENT_REQUIRED' ? 'CONSENT_REQUIRED' : `INVALID_${input.kind.toUpperCase()}`);
   }
+  if (response.status === 429) throw new LeadRejectedError('RATE_LIMITED');
+  return false;
+}
+
+async function deliver(
+  input: SubmitLeadInput,
+  options: SubmitLeadOptions | undefined,
+  emailJsParams: Record<string, string | undefined>,
+): Promise<void> {
+  const apiUrl = options?.apiUrl ?? (import.meta.env?.VITE_LEAD_API_URL as string | undefined) ?? undefined;
+  if (await sendViaLeadApi(input, apiUrl || undefined)) return;
+  await sendViaEmailJs(input.kind, emailJsParams);
+}
+
+export async function submitLead(input: SubmitLeadInput, options?: SubmitLeadOptions): Promise<void> {
+  // Honeypot: silently succeed for bots without sending anything.
+  if (input.website?.trim()) return;
+
+  if (!input.email || !EMAIL_PATTERN.test(input.email.trim())) {
+    throw new Error(`INVALID_${input.kind.toUpperCase()}`);
+  }
+
+  if (input.kind === 'waitlist') {
+    const required = [input.firstName, input.institution, input.organizationType, input.country, input.role, input.message];
+    if (required.some((value) => !value?.trim())) throw new Error('INVALID_WAITLIST');
+    if (!input.consent) throw new Error('CONSENT_REQUIRED');
+    await deliver(input, options, {
+      full_name: [input.firstName, input.lastName].filter(Boolean).join(' ').trim(),
+      work_email: input.email.trim(),
+      organization: input.institution?.trim(),
+      organization_type: input.organizationType?.trim(),
+      country: input.country?.trim(),
+      role: input.role?.trim(),
+      expectations: input.message?.trim(),
+      submitted_at: new Date().toISOString(),
+    });
+    return;
+  }
+
+  if (input.kind === 'talk_to_team') {
+    if (!input.firstName?.trim() || !input.message?.trim()) throw new Error('INVALID_TALK_TO_TEAM');
+    if (!input.consent) throw new Error('CONSENT_REQUIRED');
+    await deliver(input, options, {
+      full_name: input.firstName.trim(),
+      work_email: input.email.trim(),
+      organization: input.institution?.trim() || 'Not provided',
+      organization_type: 'Talk to the team inquiry',
+      country: input.country?.trim() || 'Not provided',
+      role: 'Not provided',
+      expectations: input.message.trim(),
+      submitted_at: new Date().toISOString(),
+    });
+    return;
+  }
+
+  // demo_request
+  if (
+    !input.firstName?.trim() ||
+    !input.institution?.trim() ||
+    !input.preferredDate || !DATE_PATTERN.test(input.preferredDate) ||
+    (input.backupDate && !DATE_PATTERN.test(input.backupDate)) ||
+    !input.preferredTime?.trim()
+  ) {
+    throw new Error('INVALID_DEMO_REQUEST');
+  }
+  if (!input.consent) throw new Error('CONSENT_REQUIRED');
+  const lines = [
+    'DEMO REQUEST — not yet scheduled. Reply to this email to confirm a time or propose another.',
+    '',
+    `Preferred date: ${formatDemoDate(input.preferredDate)} (${input.preferredDate})`,
+    ...(input.backupDate ? [`Backup date: ${formatDemoDate(input.backupDate)} (${input.backupDate})`] : []),
+    `Preferred time: ${input.preferredTime.trim()}`,
+    `Visitor's time zone: ${input.timezone?.trim() || 'Not provided'}`,
+    ...(input.message?.trim() ? ['', `Notes: ${input.message.trim()}`] : []),
+  ];
+  await deliver(input, options, {
+    full_name: input.firstName.trim(),
+    work_email: input.email.trim(),
+    organization: input.institution.trim(),
+    organization_type: 'Demo request',
+    country: input.country?.trim() || 'Not provided',
+    role: input.role?.trim() || 'Not provided',
+    expectations: lines.join('\n'),
+    submitted_at: new Date().toISOString(),
+  });
 }

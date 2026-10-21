@@ -42,9 +42,23 @@ const ROOT = join(__dirname, '..');
 // to know about a script tag that arrived via the static HTML rather than
 // its own effect. Processing "/" last means every other route still sees
 // the pristine, build-fresh index.html as its fallback shell.
-const ROUTES = ['/product', '/solutions', '/docs', '/company', '/security', '/waitlist', '/talk-to-team', '/'];
+const ROUTES = ['/product', '/solutions', '/docs', '/company', '/security', '/waitlist', '/talk-to-team', '/book-demo', '/privacy', '/'];
 
 const DEFAULT_TITLE = 'QualiTracker — Source-Cited AI Assistant & Digital QMS for Medical Laboratories';
+
+
+// index.html loads the Google Fonts stylesheet with the preload-then-activate
+// pattern (<link rel="preload" as="style" onload="this.rel='stylesheet'">) so
+// it doesn't block first paint. By the time this script serialises the DOM,
+// that onload has already run and flipped rel to "stylesheet" — which would
+// bake a render-blocking stylesheet into every prerendered page (measured on
+// production: ~2.5s of render blocking, /product LCP 4.5s). Put it back.
+function restoreFontPreload(html) {
+  return html.replace(
+    /<link rel="stylesheet" as="style"( href="https:\/\/fonts\.googleapis\.com[^"]*" onload="[^"]*">)/g,
+    '<link rel="preload" as="style"$1',
+  );
+}
 
 async function main() {
   const server = await preview({
@@ -82,12 +96,22 @@ async function main() {
         .waitForFunction((fallback) => document.title !== fallback, { timeout: 10000 }, DEFAULT_TITLE)
         .catch(() => {});
 
-      const html = await page.evaluate(() => '<!doctype html>\n' + document.documentElement.outerHTML);
+      const html = restoreFontPreload(await page.evaluate(() => '<!doctype html>\n' + document.documentElement.outerHTML));
       const outPath = route === '/' ? join(ROOT, 'dist/public/index.html') : join(ROOT, 'dist/public', route.slice(1), 'index.html');
       mkdirSync(dirname(outPath), { recursive: true });
       writeFileSync(outPath, html);
       console.log(`prerendered ${route.padEnd(16)} -> ${outPath.replace(ROOT + '/', '')} (${(html.length / 1024).toFixed(1)} KiB)`);
     }
+
+    // GitHub Pages serves /404.html (with a real 404 status) for any unknown
+    // URL. Without one, visitors get GitHub's generic page instead of the
+    // site's own NotFound. A path no route matches renders NotFound.
+    await page.goto(new URL(`${normalizedBasePath}/__not-found__`, new URL(base).origin).toString(), { waitUntil: 'networkidle0' });
+    await page.waitForSelector('h1', { timeout: 10000 });
+    const notFoundHtml = restoreFontPreload(await page.evaluate(() => '<!doctype html>\n' + document.documentElement.outerHTML));
+    if (!/Page not found/.test(notFoundHtml)) throw new Error('404 prerender did not render the NotFound page');
+    writeFileSync(join(ROOT, 'dist/public/404.html'), notFoundHtml);
+    console.log(`prerendered 404            -> dist/public/404.html (${(notFoundHtml.length / 1024).toFixed(1)} KiB)`);
   } finally {
     await browser.close();
     await new Promise((resolve, reject) => server.httpServer.close((err) => (err ? reject(err) : resolve())));

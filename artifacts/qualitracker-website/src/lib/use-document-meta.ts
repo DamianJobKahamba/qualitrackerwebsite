@@ -23,7 +23,9 @@ export function useDocumentMeta(title: string, description: string, path: string
     const previousDescription = descTag?.getAttribute('content') ?? '';
     descTag?.setAttribute('content', description);
 
-    const canonicalUrl = `${SITE_ORIGIN}${path === '/' ? '/' : path}`;
+    // GitHub Pages serves every directory route at `<route>/` and 301s the
+    // slash-less form, so a slash-less canonical would itself redirect.
+    const canonicalUrl = `${SITE_ORIGIN}${path === '/' || path.endsWith('/') ? path : `${path}/`}`;
     const canonicalTag = document.querySelector('link[rel="canonical"]');
     const previousCanonical = canonicalTag?.getAttribute('href') ?? '';
     canonicalTag?.setAttribute('href', canonicalUrl);

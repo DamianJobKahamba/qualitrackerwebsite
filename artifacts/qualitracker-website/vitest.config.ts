@@ -17,5 +17,8 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    // tests/*.test.mjs are node:test files (run via `pnpm test:node`) — vitest's
+    // default glob would otherwise pick them up and fail with "No test suite".
+    exclude: ['**/node_modules/**', '**/dist/**', 'tests/**'],
   },
 });

@@ -291,6 +291,7 @@ function LandingPage() {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
             <Button href="/waitlist" variant="gold">Join the waitlist</Button>
             <Button href="/talk-to-team" variant="reversed">Talk to the team</Button>
+            <Button href="/book-demo" variant="reversed">Book a demo</Button>
           </div>
         </Reveal>
       </section>

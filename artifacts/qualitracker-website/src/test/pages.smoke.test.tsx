@@ -10,6 +10,8 @@ import CompanyPage from '@/pages/company-page';
 import SecurityPage from '@/pages/security-page';
 import WaitlistPage from '@/pages/waitlist-page';
 import TalkToTeamPage from '@/pages/talk-to-team-page';
+import BookDemoPage from '@/pages/book-demo-page';
+import PrivacyPage from '@/pages/privacy-page';
 import NotFound from '@/pages/not-found';
 
 // One smoke test per route: renders without throwing, and shows the nav
@@ -25,6 +27,8 @@ const PAGES: Array<{ name: string; Component: () => React.JSX.Element; heading: 
   { name: 'Security', Component: SecurityPage, heading: /your lab's data never leaves its own boundary/i },
   { name: 'Waitlist', Component: WaitlistPage, heading: /join the waitlist\./i },
   { name: 'Talk to the team', Component: TalkToTeamPage, heading: /talk to the team\./i },
+  { name: 'Book a demo', Component: BookDemoPage, heading: /book a demo\./i },
+  { name: 'Privacy', Component: PrivacyPage, heading: /privacy notice\./i },
   { name: 'Not found', Component: NotFound, heading: /page not found/i },
 ];
 

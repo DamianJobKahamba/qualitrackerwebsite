@@ -83,7 +83,10 @@ function SolutionsPage() {
             If you'd like to talk through your laboratory's specific setup before these pages are ready, reach out directly.
           </p>
           <div className="mt-6">
-            <Button href="/talk-to-team" variant="secondary">Talk to the team</Button>
+            <div className="flex flex-wrap gap-3">
+              <Button href="/talk-to-team" variant="secondary">Talk to the team</Button>
+              <Button href="/book-demo" variant="ghost" arrow="arrow">Book a demo</Button>
+            </div>
           </div>
         </div>
       </section>

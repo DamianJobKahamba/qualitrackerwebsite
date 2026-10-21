@@ -20,6 +20,8 @@ const CompanyPage = lazy(() => import('@/pages/company-page'));
 const SecurityPage = lazy(() => import('@/pages/security-page'));
 const WaitlistPage = lazy(() => import('@/pages/waitlist-page'));
 const TalkToTeamPage = lazy(() => import('@/pages/talk-to-team-page'));
+const BookDemoPage = lazy(() => import('@/pages/book-demo-page'));
+const PrivacyPage = lazy(() => import('@/pages/privacy-page'));
 const NotFound = lazy(() => import('@/pages/not-found'));
 
 const queryClient = new QueryClient();
@@ -50,6 +52,8 @@ function Router() {
           <Route path="/security" component={SecurityPage} />
           <Route path="/waitlist" component={WaitlistPage} />
           <Route path="/talk-to-team" component={TalkToTeamPage} />
+          <Route path="/book-demo" component={BookDemoPage} />
+          <Route path="/privacy" component={PrivacyPage} />
           <Route component={NotFound} />
         </Switch>
       </Suspense>

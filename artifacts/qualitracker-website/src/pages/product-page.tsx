@@ -112,6 +112,7 @@ function ProductPage() {
           </div>
           <div className="mt-10 flex flex-wrap gap-4">
             <Button href="/docs" variant="secondary" arrow="arrow">Read the docs</Button>
+            <Button href="/book-demo" variant="secondary">Book a demo</Button>
             <Button href="/talk-to-team" variant="ghost">Talk to the team about your lab</Button>
           </div>
         </div>

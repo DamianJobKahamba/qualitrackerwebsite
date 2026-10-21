@@ -14,6 +14,7 @@ const COLUMNS: Array<[string, Array<{ label: string; href: string }>]> = [
   ]],
   ['Get started', [
     { label: 'Join the waitlist', href: '/waitlist' },
+    { label: 'Book a demo', href: '/book-demo' },
     { label: 'Talk to the team', href: '/talk-to-team' },
     { label: 'Security', href: '/security' },
   ]],
@@ -43,7 +44,10 @@ export function SiteFooter() {
           ))}
         </div>
         <div className="mt-10 flex flex-col gap-2 border-t pt-6 text-[11px] sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: 'rgba(255,255,255,.12)', color: 'var(--qt-light-teal)' }}>
-          <span>© {new Date().getFullYear()} Qualitracker Limited · Dar es Salaam, Tanzania</span>
+          <span>
+            © {new Date().getFullYear()} Qualitracker Limited · Dar es Salaam, Tanzania ·{' '}
+            <Link href="/privacy" className="underline" data-testid="link-footer-privacy">Privacy notice</Link>
+          </span>
           <span>Building quality-management infrastructure for laboratories — East Africa first.</span>
         </div>
       </div>

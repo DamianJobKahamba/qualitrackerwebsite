@@ -1,0 +1,23 @@
+; qualitracker.com: target zone for Cloud DNS (project qualitracker-website-e6c53)
+; Generated 2026-10-20 from the LIVE Hostinger answers (orbit.dns-parking.com), not typed by hand.
+; Principle: copy exactly first, tidy later. Apex NS/SOA are created by Cloud DNS and are intentionally absent.
+$ORIGIN qualitracker.com.
+$TTL 3600
+@ 300 IN A 199.36.158.100
+@ 3600 IN MX 1 smtp.google.com.
+@ 3600 IN TXT "hosting-site=qualitracker-website-e6c53"
+@ 3600 IN TXT "v=spf1 include:_spf.mail.hostinger.com include:_spf.google.com ~all"
+@ 3600 IN TXT "google-site-verification=tg4m10y67QhG-gXVlujaqAyqqR4fq0OQF2F0Qlr0qqY"
+www 300 IN CNAME qualitracker-website-e6c53.web.app.
+_dmarc 3600 IN TXT "v=DMARC1; p=none"
+google._domainkey 3600 IN TXT "v=DKIM1;k=rsa;p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApoWpKtKjkyVZ8JJJOX5oGBdSmj0oKJhxVzfYGX4j9jNoht/On5ZcfNBNjD62Upb5Jou8t3fFXpg1T2+RaqHgo1x86k/AlvdFMT6/FzNt/Y/pw8x/x4BLTseRQ1MPkOvhECLHS/1uEszqaQvDlSKVbBrjjqfBXrfo7U4O/iSPHI+BNaniR3FQzsvQuqLraZ4ZbK0" "" "MGjisbOaOW6LSF/G2Xs22gbpe6Tblx6ONJwcUW8ru9F6MRTa7LJmxWIbjBiiWsBv3/N0zDvRncvMWqI7FjFvB7JX0GOqaqKczxkfsSKXE/x/VZm07VKWOGWSvP195cJtIxiizGTReLReGhCrIzQIDAQAB"
+; Other apps: all on the Contabo server 5.189.158.117 until they move to GCP.
+chat 3600 IN A 5.189.158.117
+dev.chat 3600 IN A 5.189.158.117
+; Restored on request (they existed until 2026-10-19; DNS records were deleted, server still answers):
+demochallenge 3600 IN A 5.189.158.117
+qualitychallenge 3600 IN A 5.189.158.117
+; NOT carried over (Hostinger mail helpers; Google Workspace is the only mail system):
+;   autoconfig  CNAME autoconfig.mail.hostinger.com.
+;   autodiscover CNAME autodiscover.mail.hostinger.com.
+; SPF is copied unchanged on purpose. After the move is stable, remove 'include:_spf.mail.hostinger.com' from the TXT above.
